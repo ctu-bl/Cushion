@@ -67,27 +67,35 @@ contract LoanWrapperRegistry {
 
     /**
      * @notice Wrap an existing loan into a transferable ERC721
-     * @param collateralToken Address of the collateral asset for the loan.
-     *
-     * @dev Mints an ERC721 representing the wrapped loan. Emits {Wrapped}.
-     */
-    function wrapLoan(uint256 strike, address collateralToken) external payable {
+     * @param borrower Address of the borrower taking the loan (EOA)
+     * @param borrowedAmount Amount of USDC the borrower wants to borrow
+     * @dev Deploys a LoanWrapper, deposits ETH collateral, borrows USDC from Aave
+    */
+    function wrapLoan(address borrower, uint256 borrowedAmount) external payable {
         require(WETH!=address(0) && USDC!=address(0), LoanWrapperRegistry__AssetsNotSet());
         require(msg.value > 0, LoanWrapperRegistry__NoETHSent());
 
+        // 1) deploy wrapperu (pozice bude vedena na jeho adrese)
+        LoanWrapper wrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, provider);
+        wrapperOf[borrower] = address(wrapper);
+        allWrappers.push(address(wrapper));
+        emit LoanWrapped(borrower, address(wrapper), borrowedAmount, WETH);
+
         IPool pool = IPool(provider.getPool());
 
-        // 1) ETH -> WETH
+        // 2) ETH -> WETH (WETH se připíše registru, protože on posílá ETH)
         IWETH9(WETH).deposit{value: msg.value}();
 
-        // 2) deposit WETH -> aWETH (kolaterál drží tento kontrakt)
+        // 3) deposit WETH do Aave NA ÚČET WRAPPERU (onBehalfOf = wrapper)
         IERC20(WETH).approve(address(pool), msg.value);
-        pool.deposit(WETH, msg.value, address(this), 0);
+        pool.deposit(WETH, msg.value, address(wrapper), 0);
 
-        // 3) borrow USDC (rateMode=2 = VARIABLE) a pošli uživateli
-        pool.borrow(USDC, borrowUSDC, 2, 0, address(this));
-        require(IERC20(USDC).transfer(receiver, borrowUSDC), LoanWrapperRegistry__TransferFailed());
-
+        // 4) borrow USDC NA ÚČET WRAPPERU (onBehalfOf = wrapper)
+        //    Pozor: underlying USDC se po borrowu pošle volajícímu (registru),
+        //    proto ho hned přepošleme borrowerovi.
+        pool.borrow(USDC, borrowedAmount, 2, 0, address(wrapper)); // 2 = VARIABLE
+        require(IERC20(USDC).transfer(borrower, borrowedAmount), LoanWrapperRegistry__TransferFailed());
+        
     }
 
 
@@ -101,11 +109,16 @@ contract LoanWrapperRegistry {
      * @dev Burns the ERC721 and updates state to reflect loan repayment. Emits {LoanRepaid}
      * @dev Owner can execute this function only when the HF isn't below the threshold
      */
-    function repayLoan(uint64 expiryTime, uint256 strike, address collateralToken) public {
+    function repayLoan(uint64 expiryTime, address wrapper, address collateralToken) public {
         // --Checks--
+        if(msg.sender != vault || msg.sender != LoanWrapper(wrapper).owner()) { // idk if this works -> getter owner
+            revert LoanWrapper__AccessDenied();
+        }
         // --Effects--
         // --Interactions--
     }
+
+
 
     /**
      * @notice Returns array of all LoanWrapper addresses created by this registry
@@ -128,9 +141,4 @@ contract LoanWrapperRegistry {
         return hf > 1e18; // 1.0
     }
 
-    /**
-     * // TODO - Wrapper locked/injected in LoanWrapper.sol 
-     * @notice Returns array of all LoanWrapper addresses created by this registry + isInjected=false
-     */
-    function getAllWrappers() external view returns (address[] memory allWrappers, bool isInjected) { return (allWrappers, false); }
 }
