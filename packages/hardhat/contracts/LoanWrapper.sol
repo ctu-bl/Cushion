@@ -17,7 +17,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  
  * @dev Uses OpenZeppelin library for ERC721 and Ownable implementation
  */
-contract LoanWrapper is ERC721, Ownable {
+contract LoanWrapper is Ownable {
     // ------------------ERRORS------------------
     error LoanWrapper__BreaksHealthFactor();
     error LoanWrapper__WrapperNotUnlocked();
@@ -25,11 +25,9 @@ contract LoanWrapper is ERC721, Ownable {
     error LoanWrapper__InsufficientAllowance();
 
     // ------------------CONSTANTS------------------
-    uint8 private immutable LOCKING_THRESHOLD = 115;
-    // Should the locking and unlocking threshold be the same?
-    uint8 private immutable UNLOCKING_THRESHOLD = 120;
-
-    address private WRAPPER_REGISTRY;
+    address private VAULT;
+    uint256 private immutable LOCKING_THRESHOLD = 115;
+    uint256 private immutable UNLOCKING_THRESHOLD = 150;
 
     // ------------------STATE VARIABLES------------------
     /// @notice Amount of tokens representing users collateral
@@ -40,7 +38,6 @@ contract LoanWrapper is ERC721, Ownable {
 
     /// @notice Amount of tokens borrowed by the user
     uint256 private s_borrowedAmount;
-
 
     /// @notice Dddress of the 3rd party that increased the collateral
     address private s_investor;
@@ -75,11 +72,11 @@ contract LoanWrapper is ERC721, Ownable {
      */
     // I'm not sure this will work. Maybe there should be transferOwnership in constructor
     // and initial owner should be msg.sender -> Registry
-    constructor(address owner, uint256 collateral, uint256 amount, address registry)
-        ERC721("Wrapped Loan", "WL") Ownable(owner) {
+    constructor(address owner, uint256 collateral, uint256 amount, address vault)
+    Ownable(owner) {
             s_initCollateral = collateral;
             s_borrowedAmount = amount;
-            WRAPPER_REGISTRY = registry;
+            VAULT = vault;
         }
 
     // ------------------MODIFIERS------------------
@@ -98,7 +95,6 @@ contract LoanWrapper is ERC721, Ownable {
     }
 
     // ------------------PUBLIC FUNCTIONS------------------
-    
 
     // ------------------EXTERNAL AND VIEW FUNCTIONS------------------
     /**
@@ -129,6 +125,7 @@ contract LoanWrapper is ERC721, Ownable {
         // there has to be called approve() before this
         s_investor = msg.sender;
         s_investorCollateral = amount;
+        lockWrapper();
         // --Interactions--
         emit CollateralIncreased(address(this), msg.sender, amount);
     }
@@ -153,18 +150,17 @@ contract LoanWrapper is ERC721, Ownable {
         if (amount < 0 || amount > s_initCollateral) {
             revert LoanWrapper__InvalidAmount();
         }
-        // Should we restrict the investor to withdraw all of his supplies or only its part?
-        // **********************NOTE****************** - no update of of s_investor
-        // to zero when all collateral is withdrawn
         uint256 newCollateral = s_investorCollateral - amount;
-        // Shouldn't be this logic rather in Registry?
-        if (computeHealthFactor(newCollateral, s_borrowedAmount) < LOCKING_THRESHOLD) {
+        //(uint256 col, uint256 debt, , uint256 lt, ,) = .getUserAccountData(address(this));
+        if (computeHealthFactor(col - amount, debt, lt) < UNLOCKING_THRESHOLD) {
             revert LoanWrapper__BreaksHealthFactor();
         }
         // --Effects--
         // SOMETHING?.transfer(msg.sender, amount);
         // SOMETHING is IERC20 collateralToken
         s_investorCollateral -= newCollateral;
+        // CURRENT HF GOT FROM AAVE CALL
+        unlockWrapper(currentHF);
         // Return tokens back to the owner?
         // --Interactions--
         emit CollateralDecreased(address(this), msg.sender, newCollateral);
@@ -189,6 +185,7 @@ contract LoanWrapper is ERC721, Ownable {
         }
         // --Effects--
         s_borrowedAmount = newDebt;
+        //.borrow()
         // --Interactions--
         emit DebtIncreased(address(this), newAmount);
     }
@@ -209,6 +206,8 @@ contract LoanWrapper is ERC721, Ownable {
 
         // --Effects--
         s_borrowedAmount -= amount;
+        // transferFrom(owner(), amount);
+        // /transfer() na AAVE
         // --Interactions--
         emit DebtDecreased(address(this), newAmount);
     }
@@ -217,32 +216,41 @@ contract LoanWrapper is ERC721, Ownable {
     function isLocked() external view returns (bool) {
         return locked;
     }
-
+    
+    // ------------------PRIVATE AND INTERNAL FUNCTIONS------------------
     // Can be merged into one function... What is better approach?
-    function lockWrapper() external {
+    function lockWrapper() private {
         // --Checks--
-        if (msg.sender != WRAPPER_REGISTRY) {
-            revert LoanWrapper__AccessDenied();
-        }
+        // No checks
         // --Effects--
         locked = true;
         // --Interactions--
         emit WrapperLocked(address(this));
     }
 
-    function unlockWrapper() external {
+    function unlockWrapper() private {
         // --Checks--
-        if (msg.sender != WRAPPER_REGISTRY) {
-            revert LoanWrapper__AccessDenied();
-        }
+        // No checks
         // --Effects--
         locked = false;
         // --Interactions--
         emit WrapperUnlocked(address(this));
     }
+
     
-    // ------------------PRIVATE AND INTERNAL FUNCTIONS------------------
-    function computeHealthFactor(uint256 _collateral, uint256 _debt) internal returns (uint256) {
-        
+    function computeHF(
+        uint256 totalCollateralBase,
+        uint256 totalDebtBase,
+        uint256 currentLiquidationThreshold,
+        int256 collateralChange,
+        int256 debtChange
+    ) external pure returns (uint256) {
+        int256 newCollateral = int256(totalCollateralBase) + collateralChange * 1e18;
+        int256 newDebt = int256(totalDebtBase) + debtChange * 1e18;
+        if (newDebt <= 0) return type(uint256).max;
+        if (newCollateral <= 0) return 0;
+
+        uint256 hf = uint256(newCollateral) * currentLiquidationThreshold / (newDebt * 1e4);
+        return hf; // scaled stejně jako Aave (1e18)
     }
 }
