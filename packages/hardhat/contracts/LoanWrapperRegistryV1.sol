@@ -55,6 +55,7 @@ interface IFlashLoanReceiver {
 contract LoanWrapperRegistry {
     error LoanWrapperRegistry__Undercollateralized();
     error LoanWrapperRegistry__TokensNotAllowed();
+    error LoanWrapperRegistry__InvalidWrapper();
 
     IPoolAddressesProvider public immutable provider; // <AAVE_ADDRESSES_PROVIDER_SEPOLIA>
     address public immutable vault;
@@ -377,9 +378,14 @@ contract LoanWrapperRegistry {
      * @notice Returns current Health Factor (HF) of a borrower's LoanWrapper in Aave
      * @param borrowerEOA Address of the borrower whose HF is requested.
      */
-    function getHF(address borrowerEOA) external view returns (uint256 hf) {
-        address w = wrapperOf[borrowerEOA];
-        require(w!=address(0), "no wrapper");
-        (,,,,,hf) = IPool(provider.getPool()).getUserAccountData(w);
+    function getHF(address wrapper) external view returns (uint256 hf) {
+        require(wrapper != address(0), LoanWrapperRegistry__InvalidWrapper());
+        (,,,,,hf) = IPool(provider.getPool()).getUserAccountData(wrapper);
     }
+
+    /**
+     * // TODO - Wrapper locked/injected in LoanWrapper.sol 
+     * @notice Returns array of all LoanWrapper addresses created by this registry + isInjected=false
+     */
+    function getAllWrappers() external view returns (address[] memory allWrappers, bool isInjected) { return (allWrappers, false); }
 }
