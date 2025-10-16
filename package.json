@@ -56,5 +56,10 @@
   "packageManager": "yarn@3.2.3",
   "engines": {
     "node": ">=20.18.3"
+  },
+  "dependencies": {
+    "@aave/contract-helpers": "^1.36.2",
+    "@aave/math-utils": "^1.36.2",
+    "bignumber.js": "^9.3.1"
   }
 }

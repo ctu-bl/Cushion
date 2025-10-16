@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   webpack: config => {
     config.resolve.fallback = { fs: false, net: false, tls: false };
     config.externals.push("pino-pretty", "lokijs", "encoding");
+    // Workaround for ethers v5 ESM path picked by some helpers (@aave)
+    // Redirect lib.esm to CJS build which exists in all installs
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "@ethersproject/strings/lib.esm/index.js": require.resolve("@ethersproject/strings/lib/index.js"),
+      "@ethersproject/bytes/lib.esm/index.js": require.resolve("@ethersproject/bytes/lib/index.js"),
+    };
     return config;
   },
 };
