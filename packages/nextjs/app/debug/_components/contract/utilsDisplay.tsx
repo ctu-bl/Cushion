@@ -58,13 +58,13 @@ const NumberDisplay = ({ value }: { value: bigint }) => {
   }
 
   return (
-    <div className="flex items-baseline">
+    <div className="flex items-baseline text-base-content">
       {isEther ? "Ξ" + formatEther(value) : String(value)}
       <span
         className="tooltip tooltip-secondary font-sans ml-2"
         data-tip={isEther ? "Multiply by 1e18" : "Divide by 1e18"}
       >
-        <button className="btn btn-ghost btn-circle btn-xs" onClick={() => setIsEther(!isEther)}>
+        <button className="btn btn-ghost btn-circle btn-xs text-base-content" onClick={() => setIsEther(!isEther)}>
           <ArrowsRightLeftIcon className="h-3 w-3 opacity-65" />
         </button>
       </span>
@@ -94,7 +94,7 @@ export const ObjectFieldDisplay = ({
 const ArrayDisplay = ({ values, size }: { values: DisplayContent[]; size: ResultFontSize }) => {
   return (
     <div className="flex flex-col gap-y-1">
-      {values.length ? "array" : "[]"}
+      <span className="text-base-content">{values.length ? "array" : "[]"}</span>
       {values.map((v, i) => (
         <ObjectFieldDisplay key={i} name={`[${i}]`} value={v} size={size} />
       ))}
@@ -105,7 +105,7 @@ const ArrayDisplay = ({ values, size }: { values: DisplayContent[]; size: Result
 const StructDisplay = ({ struct, size }: { struct: Record<string, any>; size: ResultFontSize }) => {
   return (
     <div className="flex flex-col gap-y-1">
-      struct
+      <span className="text-base-content">struct</span>
       {Object.entries(struct).map(([k, v]) => (
         <ObjectFieldDisplay key={k} name={k} value={v} size={size} />
       ))}

@@ -29,7 +29,7 @@ export const ContractWriteMethods = ({
     .sort((a, b) => (b.inheritedFrom ? b.inheritedFrom.localeCompare(a.inheritedFrom) : 1));
 
   if (!functionsToDisplay.length) {
-    return <>No write methods</>;
+    return <p className="text-base-content/50 text-center py-4">No write methods</p>;
   }
 
   return (

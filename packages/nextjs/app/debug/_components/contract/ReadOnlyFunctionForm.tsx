@@ -71,7 +71,7 @@ export const ReadOnlyFunctionForm = ({
 
   return (
     <div className="flex flex-col gap-3 py-5 first:pt-0 last:pb-1">
-      <p className="font-medium my-0 break-words">
+      <p className="font-semibold my-0 break-words text-base-content">
         {abiFunction.name}
         <InheritanceTooltip inheritedFrom={inheritedFrom} />
       </p>
@@ -79,14 +79,14 @@ export const ReadOnlyFunctionForm = ({
       <div className="flex flex-col md:flex-row justify-between gap-2 flex-wrap">
         <div className="grow w-full md:max-w-[80%]">
           {result !== null && result !== undefined && (
-            <div className="bg-secondary rounded-3xl text-sm px-4 py-1.5 break-words overflow-auto">
-              <p className="font-bold m-0 mb-1">Result:</p>
-              <pre className="whitespace-pre-wrap break-words">{displayTxResult(result, "sm")}</pre>
+            <div className="bg-base-100 border border-base-content/10 rounded-xl text-sm px-4 py-2 break-words overflow-auto">
+              <p className="font-bold m-0 mb-1 text-base-content">Result:</p>
+              <pre className="whitespace-pre-wrap break-words text-base-content">{displayTxResult(result, "sm")}</pre>
             </div>
           )}
         </div>
         <button
-          className="btn btn-secondary btn-sm self-end md:self-start"
+          className="btn bg-accent hover:bg-accent/80 text-accent-content border-none btn-sm self-end md:self-start"
           onClick={async () => {
             const { data } = await refetch();
             setResult(data);
