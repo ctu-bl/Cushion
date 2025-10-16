@@ -189,7 +189,7 @@ export default function Home() {
       </section>
 
       {/* Features Preview */}
-      <section className="py-20 px-4 bg-base-100">
+      <section className="py-20 px-4 bg-base-100/80 backdrop-blur-sm">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4 text-base-content">How Cushion Works</h2>
