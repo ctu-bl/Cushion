@@ -193,13 +193,16 @@ export default function Home() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4 text-base-content">How Cushion Works</h2>
-            <p className="text-lg text-base-content/70 max-w-2xl mx-auto">Earn yield while providing liquidation insurance for Aave borrowers. Automated protection that works 24/7.</p>
+            <p className="text-lg text-base-content/70 max-w-2xl mx-auto">
+              Earn yield while providing liquidation insurance for Aave borrowers. Automated protection that works 24/7.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-sm p-8 text-center hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-base-content/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Card 1 - Automated Protection */}
+            <div className="group bg-base-100 rounded-3xl border border-base-content/10 p-8 text-center hover:border-accent/50 transition-all duration-300 hover:shadow-2xl hover:shadow-accent/20 hover:-translate-y-2">
+              <div className="w-20 h-20 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:bg-accent/20 transition-all duration-300">
+                <svg className="w-10 h-10 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -208,13 +211,17 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-base-content">text13</h3>
-              <p className="text-base-content/70">text14</p>
+              <h3 className="text-2xl font-bold mb-4 text-base-content">Automated Protection</h3>
+              <p className="text-base-content leading-relaxed">
+                Our keepers monitor your health factor 24/7 and automatically inject pyUSD when needed to prevent
+                liquidation.
+              </p>
             </div>
 
-            <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-sm p-8 text-center hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-base-content/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Card 2 - Earn Passive Yield */}
+            <div className="group bg-base-100 rounded-3xl border border-base-content/10 p-8 text-center hover:border-accent/50 transition-all duration-300 hover:shadow-2xl hover:shadow-accent/20 hover:-translate-y-2">
+              <div className="w-20 h-20 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:bg-accent/20 transition-all duration-300">
+                <svg className="w-10 h-10 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -223,13 +230,17 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-base-content">text15</h3>
-              <p className="text-base-content/70">text16</p>
+              <h3 className="text-2xl font-bold mb-4 text-base-content">Earn Passive Yield</h3>
+              <p className="text-base-content leading-relaxed">
+                Deposit pyUSD into our vault and earn <span className="font-semibold text-accent">15% APY</span> while
+                providing liquidity insurance for the protocol.
+              </p>
             </div>
 
-            <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-sm p-8 text-center hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-base-content/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Card 3 - Reduced Losses */}
+            <div className="group bg-base-100 rounded-3xl border border-base-content/10 p-8 text-center hover:border-accent/50 transition-all duration-300 hover:shadow-2xl hover:shadow-accent/20 hover:-translate-y-2">
+              <div className="w-20 h-20 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:bg-accent/20 transition-all duration-300">
+                <svg className="w-10 h-10 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -238,8 +249,11 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-base-content">text17</h3>
-              <p className="text-base-content/70">text18</p>
+              <h3 className="text-2xl font-bold mb-4 text-base-content">Reduced Losses</h3>
+              <p className="text-base-content leading-relaxed">
+                Pay a small fee for protection and significantly reduce your liquidation losses if markets turn against
+                you.
+              </p>
             </div>
           </div>
         </div>
