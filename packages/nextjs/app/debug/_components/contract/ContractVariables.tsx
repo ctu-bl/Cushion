@@ -30,7 +30,7 @@ export const ContractVariables = ({
     .sort((a, b) => (b.inheritedFrom ? b.inheritedFrom.localeCompare(a.inheritedFrom) : 1));
 
   if (!functionsToDisplay.length) {
-    return <>No contract variables</>;
+    return <p className="text-base-content/50 text-center py-4">No contract variables</p>;
   }
 
   return (

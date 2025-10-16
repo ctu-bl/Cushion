@@ -9,7 +9,7 @@ export const TxReceipt = ({ txResult }: { txResult: TransactionReceipt }) => {
     useCopyToClipboard();
 
   return (
-    <div className="flex text-sm rounded-3xl peer-checked:rounded-b-none min-h-0 bg-secondary py-0">
+    <div className="flex text-sm rounded-xl peer-checked:rounded-b-none min-h-0 bg-base-100 border border-base-content/10 py-0">
       <div className="mt-1 pl-2">
         {isTxResultCopiedToClipboard ? (
           <CheckCircleIcon
@@ -18,19 +18,19 @@ export const TxReceipt = ({ txResult }: { txResult: TransactionReceipt }) => {
           />
         ) : (
           <DocumentDuplicateIcon
-            className="ml-1.5 text-xl font-normal h-5 w-5 cursor-pointer"
+            className="ml-1.5 text-xl font-normal h-5 w-5 cursor-pointer text-base-content"
             aria-hidden="true"
             onClick={() => copyTxResultToClipboard(JSON.stringify(txResult, replacer, 2))}
           />
         )}
       </div>
-      <div tabIndex={0} className="flex-wrap collapse collapse-arrow">
+      <div tabIndex={0} className="flex-wrap collapse collapse-arrow text-base-content">
         <input type="checkbox" className="min-h-0! peer" />
         <div className="collapse-title text-sm min-h-0! py-1.5 pl-1 after:top-4!">
-          <strong>Transaction Receipt</strong>
+          <strong className="text-base-content">Transaction Receipt</strong>
         </div>
-        <div className="collapse-content overflow-auto bg-secondary rounded-t-none rounded-3xl pl-0!">
-          <pre className="text-xs">
+        <div className="collapse-content overflow-auto bg-base-100 rounded-t-none rounded-xl pl-0!">
+          <pre className="text-xs text-base-content">
             {Object.entries(txResult).map(([k, v]) => (
               <ObjectFieldDisplay name={k} value={v} size="xs" leftPad={false} key={k} />
             ))}

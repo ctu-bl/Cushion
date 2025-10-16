@@ -24,7 +24,7 @@ export const ContractReadMethods = ({ deployedContractData }: { deployedContract
     .sort((a, b) => (b.inheritedFrom ? b.inheritedFrom.localeCompare(a.inheritedFrom) : 1));
 
   if (!functionsToDisplay.length) {
-    return <>No read methods</>;
+    return <p className="text-base-content/50 text-center py-4">No read methods</p>;
   }
 
   return (
