@@ -57,7 +57,7 @@ export const Balance = ({ address, className = "", usdMode }: BalanceProps) => {
       onClick={toggleDisplayUsdMode}
       type="button"
     >
-      <div className="w-full flex items-center justify-center">
+      <div className="w-full flex items-center justify-center text-base-content">
         {displayUsdMode ? (
           <>
             <span className="text-[0.8em] font-bold mr-1">$</span>
