@@ -1,13 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import AaveSepoliaBorrows from "./_components/AaveSepoliaBorrows";
 import { useAccount } from "wagmi";
-import {
-  ArrowDownCircleIcon,
-  ArrowUpCircleIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
+import { CheckCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 
 type HealthStatus = "good" | "rescue" | "liquidated";
@@ -65,15 +61,8 @@ export default function DashboardPage() {
     },
   }[data.status];
 
-  // UI: Insurance list if no active insurance or switching
   const insuranceList = (
     <>
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="text-4xl font-bold">Insurances</h1>
-        <button className="btn btn-primary" onClick={() => setShowTakeModal(true)}>
-          Take insurance
-        </button>
-      </div>
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[1, 2, 3].map(id => (
           <div key={id} className="card bg-base-100 rounded-2xl border border-base-300/60 shadow-md p-6">
@@ -126,32 +115,6 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card bg-base-100 rounded-2xl border border-base-300/60 shadow-md p-6 lg:col-span-2">
-          <h2 className="text-xl font-semibold mb-4">Actions</h2>
-          {data.status === "good" && (
-            <div className="flex flex-wrap gap-3">
-              <button className="btn btn-primary gap-2">
-                <ArrowDownCircleIcon className="h-5 w-5" /> Repay
-              </button>
-              <button className="btn btn-secondary gap-2">
-                <ArrowUpCircleIcon className="h-5 w-5" /> Increase debt
-              </button>
-            </div>
-          )}
-
-          {data.status === "rescue" && (
-            <p className="text-base-content/70">
-              Rescue is in progress. Actions are temporarily unavailable; you can only monitor the position.
-            </p>
-          )}
-
-          {data.status === "liquidated" && (
-            <div className="flex flex-wrap gap-3">
-              <button className="btn btn-accent">Withdraw remaining collateral</button>
-            </div>
-          )}
-        </div>
-
         <div className="card bg-base-100 rounded-2xl border border-base-300/60 shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4">Wallet</h2>
           <div className="space-y-3">
@@ -167,6 +130,7 @@ export default function DashboardPage() {
 
   return (
     <main className="container mx-auto py-12 px-4 md:px-8">
+      {address && <AaveSepoliaBorrows address={address as `0x${string}`} className="mb-8" />}
       {!hasActiveInsurance ? insuranceList : insuranceDashboard}
 
       {showTakeModal && (
