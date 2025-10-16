@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
 import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
+import { SwitchTheme } from "~~/components/SwitchTheme";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
@@ -47,16 +47,23 @@ export const HeaderMenuLinks = () => {
       {menuLinks.map(({ label, href, icon }) => {
         const isActive = pathname === href;
         return (
-          <li key={href}>
+          <li key={href} className="list-none">
             <Link
               href={href}
-              passHref
-              className={`${
-                isActive ? "bg-secondary shadow-md" : ""
-              } hover:bg-secondary hover:shadow-md focus:!bg-secondary active:!text-neutral py-1.5 px-3 text-sm rounded-full gap-2 grid grid-flow-col`}
+              className={`relative py-2 px-3 text-sm font-medium flex items-center gap-2 group ${
+                isActive ? "text-base-content" : "text-base-content/70 hover:text-base-content/90"
+              }`}
             >
               {icon}
-              <span>{label}</span>
+              <span className="relative">
+                {label}
+                <span
+                  className={`absolute bottom-0 left-0 h-[2px] bg-base-content transition-all duration-300 ${
+                    isActive ? "w-full" : "w-0 group-hover:w-full"
+                  }`}
+                  style={{ bottom: "-4px" }}
+                />
+              </span>
             </Link>
           </li>
         );
@@ -78,14 +85,14 @@ export const Header = () => {
   });
 
   return (
-    <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">
+    <div className="sticky top-0 navbar bg-base-300 min-h-0 shrink-0 justify-between z-20 border-b border-base-content/10 px-4 sm:px-6">
       <div className="navbar-start w-auto lg:w-1/2">
         <details className="dropdown" ref={burgerMenuRef}>
-          <summary className="ml-1 btn btn-ghost lg:hidden hover:bg-transparent">
-            <Bars3Icon className="h-1/2" />
+          <summary className="ml-1 btn btn-ghost lg:hidden hover:bg-base-100/50">
+            <Bars3Icon className="h-6 w-6 text-base-content" />
           </summary>
           <ul
-            className="menu menu-compact dropdown-content mt-3 p-2 shadow-sm bg-base-100 rounded-box w-52"
+            className="menu menu-compact dropdown-content mt-3 p-2 shadow-lg bg-base-100 rounded-lg w-52 border border-base-content/10"
             onClick={() => {
               burgerMenuRef?.current?.removeAttribute("open");
             }}
@@ -95,18 +102,21 @@ export const Header = () => {
         </details>
         <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
-            <Image alt="SE2 logo" className="cursor-pointer" fill src="/logo.svg" />
+            <svg className="w-full h-full text-base-content drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+            </svg>
           </div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">Cushion</span>
-            <span className="text-xs">Your financial insurance</span>
+            <span className="font-bold leading-tight text-base-content">Cushion</span>
+            <span className="text-xs text-base-content/60">Your financial insurance</span>
           </div>
         </Link>
-        <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
+        <ul className="hidden lg:flex lg:flex-nowrap items-center px-1 gap-1">
           <HeaderMenuLinks />
         </ul>
       </div>
-      <div className="navbar-end grow mr-4">
+      <div className="navbar-end grow mr-4 flex items-center gap-2">
+        <SwitchTheme />
         <RainbowKitCustomConnectButton />
         {isLocalNetwork && <FaucetButton />}
       </div>
