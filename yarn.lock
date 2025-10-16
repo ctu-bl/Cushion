@@ -19,6 +19,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aave/core-v3@npm:^1.19.3":
+  version: 1.19.3
+  resolution: "@aave/core-v3@npm:1.19.3"
+  checksum: 64fe159280b9777a0913c0d8612c03c6e17bced1304975e72a9bb99a9af400159ae10f2038d4e182d6237e20cbe8d16aba5bb9dacbc9d93d38e032a5260e5dbb
+  languageName: node
+  linkType: hard
+
 "@aave/math-utils@npm:^1.36.2":
   version: 1.36.2
   resolution: "@aave/math-utils@npm:1.36.2"
@@ -3538,6 +3545,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@se-2/hardhat@workspace:packages/hardhat"
   dependencies:
+    "@aave/core-v3": ^1.19.3
     "@ethersproject/abi": ~5.7.0
     "@ethersproject/providers": ~5.7.2
     "@inquirer/password": ^4.0.2
