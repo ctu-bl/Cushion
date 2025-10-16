@@ -172,31 +172,40 @@ export default function AaveSepoliaBorrowsViem({ address, rpcUrl, className }: P
   }, [address, client]);
 
   return (
-    <div className={cx("w-full max-w-2xl", className)}>
-      <div className={cx("mb-4 rounded-2xl border", "border-gray-200 p-4", "shadow-sm")}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Aave Borrows · Sepolia</h2>
-          <span className="text-xs text-gray-500">{shorten(address)}</span>
+    <div className={cx("w-full", className)}>
+      <div className="bg-base-100 rounded-2xl border border-base-content/10 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-base-content">Your borrows</h2>
+          <span className="text-xs text-base-content/50 font-mono bg-base-200 px-3 py-1 rounded-full">
+            {shorten(address)}
+          </span>
         </div>
 
-        {loading && <div className="mt-3 text-sm text-gray-600">Načítám tvoje borrow pozice…</div>}
-        {error && <div className="mt-3 text-sm text-red-600">Chyba: {String(error)}</div>}
+        {loading && <div className="mt-3 text-sm text-base-content/60">Načítám tvoje borrow pozice…</div>}
+        {error && (
+          <div className="mt-3 px-4 py-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">
+            Chyba: {String(error)}
+          </div>
+        )}
 
         {!loading && !error && rows.length === 0 && (
-          <div className="mt-3 text-sm text-gray-600">Žádné aktivní borrows.</div>
+          <div className="mt-3 text-sm text-base-content/60 text-center py-8">
+            <p>Žádné aktivní borrows.</p>
+            <p className="text-xs text-base-content/40 mt-2">Supply assets on Aave to enable borrowing</p>
+          </div>
         )}
 
         {!loading && !error && rows.length > 0 && (
-          <div className="mt-4 divide-y rounded-2xl border border-base-300/60">
+          <div className="mt-4 divide-y divide-base-content/10 border border-base-content/10 rounded-xl overflow-hidden">
             {rows.map((r, i) => (
-              <div key={i} className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-base-200 grid place-items-center text-xs font-bold">
+              <div key={i} className="flex items-center justify-between p-4 hover:bg-base-200/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 grid place-items-center text-sm font-bold text-primary">
                     {r.symbol.slice(0, 1)}
                   </div>
                   <div>
-                    <div className="font-medium">{r.symbol}</div>
-                    <div className="text-sm text-base-content/60 font-mono">
+                    <div className="font-semibold text-base-content">{r.symbol}</div>
+                    <div className="text-sm text-base-content/50 font-mono">
                       {fmt2(r.amountToken)} {r.symbol}
                     </div>
                   </div>
@@ -205,7 +214,7 @@ export default function AaveSepoliaBorrowsViem({ address, rpcUrl, className }: P
                   className="btn btn-sm btn-primary"
                   onClick={() => console.log(`Take insurance for ${r.symbol}`)}
                 >
-                  Take Insurance
+                  Details
                 </button>
               </div>
             ))}
