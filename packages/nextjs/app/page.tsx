@@ -55,7 +55,7 @@ export default function Home() {
                 {/* Shield with glow effect */}
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
                 <svg
-                  className="relative w-full h-full text-primary drop-shadow-2xl"
+                  className="relative w-full h-full text-base-content drop-shadow-2xl"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
