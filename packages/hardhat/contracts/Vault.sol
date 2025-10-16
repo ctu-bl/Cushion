@@ -6,6 +6,14 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+
+interface ILoanWrapper {
+    function getTotalCollateralValue() external view returns (uint256);
+    function getTotalDebtValue() external view returns (uint256);
+    function increaseCollateral(uint256 amount) external;
+    function decreaseCollateral(uint256 amount) external;
+}
+
 /**
  * @title Vault
  * @author CtuBlockhain Lab
@@ -52,7 +60,7 @@ contract Vault is ERC4626, Ownable {
 
     /// @notice The annual interest rate charged on injected capital (1e18 precision).
    
-    uint256 public interestRate == ????; // TODO: Decide to interestRate if we have decided to be 5% it should be 5 * 1e16 I think;
+    uint256 public interestRate == 5* 1e16; // TODO: Decide to interestRate if we have decided to be 5% it should be 5 * 1e16 I think;
 
     /// @notice The global accumulated interest index, representing the growth of capital over time.
     uint256 public accumulatedInterest;
@@ -122,6 +130,8 @@ contract Vault is ERC4626, Ownable {
      */
     function setInterestRate(uint256 _newRate) external onlyOwner {
         // TODO: IMPLEMENT THIS
+        interestRate = _newRate;
+        emit InterestRateSet(_newRate);
     }
 
     /**
@@ -132,18 +142,53 @@ contract Vault is ERC4626, Ownable {
         uint256 _withdrawal,
         uint256 _liquidation
     ) external onlyOwner {
-        // TODO: IMPLEMENT THIS
+        injectionThreshold = _injection;
+        withdrawalThreshold = _withdrawal;
+        liquidationThreshold = _liquidation;
+        emit ThresholdsSet(_injection, _withdrawal, _liquidation);
     }
 
     // ------------------EXTERNAL FUNCTIONS-----------------------
     /**
      * @notice Injects liquidity from the vault into a risky loan.
      * @param loan Address of the Cushion LoanWrapper.
-     * @dev Can be called by anyone when a loan's HF is below the injection threshold.
+     * @dev Can be called just with bot. Checking of HF is deleated
      */
     function injectToLoan(address loan) external {
         // TODO: IMPLEMENT THIS
         
+        updateAccumulatedInterest();
+
+        uint256 collateralValue = ILoanWrapper(loan).getTotalCollateralValue();
+        uint256 debtValue = ILoanWrapper(loan).getTotalDebtValue();
+
+        if (collateralValue == 0) revert Vault__InvalidLoanAddress();
+
+        uint256 injectionAmountEth = ((collateralValue - debtValue) * (debtValue / collateralValue)) / 2;
+        if (asset().balanceOf(address(this)) < injectionAmountEth) revert Vault__InsufficientLiquidity();
+
+
+        // calculate Eth -> PyUsd
+
+        // swap pyUSD -> Eth
+        
+        // send Eth to LoanWrapper
+        ILoanWrapper(loan).increaseCollateral{value: injectionAmountEth}(injectionAmountEth);
+
+        // --- Efekty ---
+        injectedAssets[loan] = InjectedCapital({
+            amountPyUsd: injectionAmountEth,
+            initialAccumulatedInterest: accumulatedInterest
+        });
+        totalInjectedAssets += injectionAmountEth;  
+
+        // --- Interakce (Odeslání pyUSD) ---
+        //asset().transfer(loan, injectionAmountEth);
+        //ILoanWrapper(loan).increaseCollateral{value: injectionAmountEth}();
+        
+        emit CapitalInjected(loan, injectionAmountEth);
+
+
         // 1. Checks:
         //    - Need to get HF from LoanWrapper 
         //    - require (HF that is takne < injectionThreshold, "Still to high, will not inject");
@@ -165,6 +210,20 @@ contract Vault is ERC4626, Ownable {
      * @dev Can be called by anyone when a loan's HF is above the withdrawal threshold.
      */
     function withdrawFromLoan(address loan) external {
+
+        updateAccumulatedInterest();
+        
+        InjectedCapital memory injected = injectedAssets[loan];
+        if (injected.amount == 0) revert Vault__NoInjectedAssets();
+        
+        uint256 withdrawalAmount = currentLoanValue(loan);
+        totalInjectedAssets -= injected.amount;
+        delete injectedAssets[loan];
+
+        ILoanWrapper(loan).decreaseCollateral(withdrawalAmount);
+        
+        emit CapitalWithdrawn(loan, withdrawalAmount);
+
         // TODO: IMPLEMENT THIS;
         //
         // 1. Checks:
@@ -206,6 +265,9 @@ contract Vault is ERC4626, Ownable {
         //    - Ensure the operation was profitable.
     }
 
+    function changePyUSDToEth(uint256 amount) external {
+        
+    }
     // -------------------VIEW AND HELPER FUNCTIONS-------------------
 
     /**
@@ -213,7 +275,14 @@ contract Vault is ERC4626, Ownable {
      * @dev Should be called at the beginning of any function that relies on the current value.
      */
     function updateAccumulatedInterest() public {
-        // TODO: IMPLEMENT THIS
+        if (block.timestamp > lastInterestUpdate) {
+            uint256 timeDelta = block.timestamp - lastInterestUpdate;
+            uint256 interestPerSecond = interestRate / SECONDS_PER_YEAR;
+            uint256 interestAccrued = interestPerSecond * timeDelta;
+            accumulatedInterest = accumulatedInterest.mulDiv(1e18 + interestAccrued, 1e18);
+            lastInterestUpdate = block.timestamp;
+            emit InterestUpdated(accumulatedInterest);
+        }
     }
 
     /**
@@ -240,6 +309,8 @@ contract Vault is ERC4626, Ownable {
         return 0; // Placeholder
     }
 
+    receive() external payable {}
+    
     /**
      * Maybe more functions, will add it later
      */
