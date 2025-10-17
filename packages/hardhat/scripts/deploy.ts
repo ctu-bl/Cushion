@@ -1,65 +1,113 @@
-import { ethers } from "ethers";
+import { ethers as ethersLib } from "ethers";
 import hre from "hardhat";
 
-// Aave V3 Sepolia addresses
-const AAVE_POOL_ADDRESSES_PROVIDER = "0x012bAC54348C0E635dCAc9D5FB99f06F24136C9A";
-const AAVE_DATA_PROVIDER = "0x3e9708d80f7B3e43118013075F7e95CE3AB31F31";
+// Mock addresses for local Hardhat deployment
+// Note: These are placeholder addresses. For real testing, deploy mock contracts first.
+const MOCK_AAVE_PROVIDER = "0x0000000000000000000000000000000000000001";
+const MOCK_WETH = "0x0000000000000000000000000000000000000002";
+const MOCK_USDC = "0x0000000000000000000000000000000000000003";
 
 async function main() {
-  console.log("🚀 Starting deployment...\n");
+  console.log("🚀 Starting deployment on Hardhat network...\n");
 
   // Use default Hardhat network RPC URL
-  const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+  const provider = new ethersLib.providers.JsonRpcProvider("http://127.0.0.1:8545");
   
   // Use default Hardhat account #0 private key
   const deployerPK = process.env.__RUNTIME_DEPLOYER_PRIVATE_KEY || 
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-  const deployer = new ethers.Wallet(deployerPK, provider);
+  const deployer = new ethersLib.Wallet(deployerPK, provider);
   
   console.log("Deploying contracts with account:", deployer.address);
   const balance = await provider.getBalance(deployer.address);
-  console.log("Account balance:", ethers.formatEther(balance), "ETH\n");
+  console.log("Account balance:", ethersLib.utils.formatEther(balance), "ETH\n");
 
   // ========== Deploy Vault ==========
   console.log("📦 Deploying Vault...");
   const VaultArtifact = await hre.artifacts.readArtifact("Vault");
-  const VaultFactory = new ethers.ContractFactory(
+  const VaultFactory = new ethersLib.ContractFactory(
     VaultArtifact.abi,
     VaultArtifact.bytecode,
     deployer
   );
   
   const vault = await VaultFactory.deploy("Cushion Vault", "cvPYUSD");
-  await vault.waitForDeployment();
-  const vaultAddress = await vault.getAddress();
+  await vault.deployTransaction.wait();
+  const vaultAddress = vault.address;
   console.log("✅ Vault deployed to:", vaultAddress);
 
-  // ========== Deploy LoanWrapperRegistryV2 ==========
-  console.log("\n📦 Deploying LoanWrapperRegistryV2...");
-  const RegistryArtifact = await hre.artifacts.readArtifact("LoanWrapperRegistryV2");
-  const RegistryFactory = new ethers.ContractFactory(
+  // ========== Deploy LoanWrapperRegistry ==========
+  console.log("\n📦 Deploying LoanWrapperRegistry...");
+  const RegistryArtifact = await hre.artifacts.readArtifact("LoanWrapperRegistry");
+  const RegistryFactory = new ethersLib.ContractFactory(
     RegistryArtifact.abi,
     RegistryArtifact.bytecode,
     deployer
   );
   
   const registry = await RegistryFactory.deploy(
-    AAVE_POOL_ADDRESSES_PROVIDER,
-    vaultAddress,
-    AAVE_DATA_PROVIDER
+    MOCK_AAVE_PROVIDER,  // Aave Pool Addresses Provider
+    vaultAddress,        // Vault address
+    MOCK_WETH,          // WETH address
+    MOCK_USDC           // USDC address
   );
-  await registry.waitForDeployment();
-  const registryAddress = await registry.getAddress();
-  console.log("✅ LoanWrapperRegistryV2 deployed to:", registryAddress);
+  await registry.deployTransaction.wait();
+  const registryAddress = registry.address;
+  console.log("✅ LoanWrapperRegistry deployed to:", registryAddress);
 
   console.log("\n✨ Deployment completed!");
   console.log("\n📋 Deployed contracts:");
-  console.log("  Vault:", vaultAddress);
-  console.log("  LoanWrapperRegistryV2:", registryAddress);
-  console.log("\n🔗 Aave V3 Sepolia:");
-  console.log("  Pool Provider:", AAVE_POOL_ADDRESSES_PROVIDER);
-  console.log("  Data Provider:", AAVE_DATA_PROVIDER);
+  console.log("  Vault:                  ", vaultAddress);
+  console.log("  LoanWrapperRegistry:    ", registryAddress);
+  console.log("\n⚠️  Mock addresses (placeholders):");
+  console.log("  Aave Provider:          ", MOCK_AAVE_PROVIDER);
+  console.log("  WETH:                   ", MOCK_WETH);
+  console.log("  USDC:                   ", MOCK_USDC);
+  console.log("\n💡 LoanWrapper contracts will be deployed dynamically when wrapping loans");
 
+  // Generate deployedContracts.ts for frontend
+  await generateDeployedContracts(vaultAddress, registryAddress);
+}
+
+async function generateDeployedContracts(vaultAddress: string, registryAddress: string) {
+  const fs = await import("fs");
+  const path = await import("path");
+  
+  // Read ABIs from artifacts
+  const VaultABI = (await hre.artifacts.readArtifact("Vault")).abi;
+  const RegistryABI = (await hre.artifacts.readArtifact("LoanWrapperRegistry")).abi;
+  
+  const chainId = "31337"; // Hardhat local chain ID as string
+  
+  const deployedContracts = {
+    [chainId]: {
+      Vault: {
+        address: vaultAddress,
+        abi: VaultABI,
+      },
+      LoanWrapperRegistry: {
+        address: registryAddress,
+        abi: RegistryABI,
+      },
+    },
+  } as const;
+  
+  const fileContent = `/**
+ * This file is autogenerated by Scaffold-ETH.
+ * You should not edit it manually or your changes might be overwritten.
+ */
+import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
+
+const deployedContracts = ${JSON.stringify(deployedContracts, null, 2)} as const;
+
+export default deployedContracts satisfies GenericContractsDeclaration;
+`;
+  
+  const outputPath = path.join(process.cwd(), "../nextjs/contracts/deployedContracts.ts");
+  fs.writeFileSync(outputPath, fileContent);
+  
+  console.log("\n✅ Generated deployedContracts.ts for frontend");
+  console.log("🌐 You can now view your contracts at http://localhost:3000/debug");
 }
 
 main()
