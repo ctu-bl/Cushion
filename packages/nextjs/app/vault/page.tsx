@@ -223,7 +223,7 @@ export default function VaultPage() {
         args: [BigInt(amount), address!],
       });
       setDepositTxHash(hash);
-      setShowDepositModal(false);
+    setShowDepositModal(false);
       console.log("Deposit transaction sent:", hash);
     } catch (error) {
       console.error("Deposit failed:", error);
@@ -254,7 +254,7 @@ export default function VaultPage() {
         args: [BigInt(amount), address!, address!],
       });
       setWithdrawTxHash(hash);
-      setShowWithdrawModal(false);
+    setShowWithdrawModal(false);
       console.log("Withdraw transaction sent:", hash);
     } catch (error) {
       console.error("Withdraw failed:", error);
