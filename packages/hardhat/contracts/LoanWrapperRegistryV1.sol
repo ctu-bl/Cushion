@@ -79,7 +79,7 @@ contract LoanWrapperRegistry {
         require(msg.value > 0, LoanWrapperRegistry__NoETHSent());
 
         // 1) deploy wrapperu (pozice bude vedena na jeho adrese)
-        LoanWrapper wrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, address(provider));
+        try new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, address(provider)) returns (LoanWrapper wrapper) {
         wrapperOf[borrower] = address(wrapper);
         allWrappers.push(address(wrapper));
         emit LoanWrapped(borrower, address(wrapper), borrowedAmount, WETH);
@@ -98,7 +98,9 @@ contract LoanWrapperRegistry {
         //    proto ho hned přepošleme borrowerovi.
         pool.borrow(USDC, borrowedAmount, 2, 0, address(wrapper)); // 2 = VARIABLE
         require(IERC20(USDC).transfer(borrower, borrowedAmount), LoanWrapperRegistry__TransferFailed());
-        
+        } catch {
+            revert("LoanWrapper deployment failed");
+        }
     }
 
 
