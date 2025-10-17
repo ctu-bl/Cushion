@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {DataTypes} from "@aave/core-v3/contracts/protocol/libraries/types/DataTypes.sol";
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
+import {LoanWrapper} from "./LoanWrapper.sol";
 
 
 interface IWETH9 {
@@ -78,7 +79,7 @@ contract LoanWrapperRegistry {
         require(msg.value > 0, LoanWrapperRegistry__NoETHSent());
 
         // 1) deploy wrapperu (pozice bude vedena na jeho adrese)
-        LoanWrapper wrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, provider);
+        LoanWrapper wrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, address(provider));
         wrapperOf[borrower] = address(wrapper);
         allWrappers.push(address(wrapper));
         emit LoanWrapped(borrower, address(wrapper), borrowedAmount, WETH);
@@ -101,16 +102,9 @@ contract LoanWrapperRegistry {
     }
 
 
-    /**
-     * @notice Returns array of all LoanWrapper addresses created by this registry
-     * @param borrowerEOA Address of the borrower whose wrapper is requested.
-     */
+
     function getAllWrappers() external view returns (address[] memory) { return allWrappers; }
 
-    /**
-     * @notice Returns current Health Factor (HF) of a borrower's LoanWrapper in Aave
-     * @param borrowerEOA Address of the borrower whose HF is requested.
-     */
     function getHF(address wrapper) external view returns (uint256 hf) {
         require(wrapper != address(0), LoanWrapperRegistry__InvalidWrapper());
         (,,,,,hf) = IPool(provider.getPool()).getUserAccountData(wrapper);
