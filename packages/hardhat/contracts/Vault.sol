@@ -9,10 +9,12 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface ILoanWrapper {
     function getTotalCollateralValue() external view returns (uint256);
-    function getTotalDebtValue() external view returns (uint256);
+    function getTotalDebtValue() external view returns (uint256); 
     function increaseCollateral(uint256 amount) external payable;
-    function decreaseCollateral(uint256 amount) external;
+    function decreaseCollateral(uint256 amount) external payable; 
 }
+
+
 
 interface ISwapRouter {
     struct ExactInputSingleParams {
@@ -235,22 +237,7 @@ contract Vault is ERC4626, Ownable {
      * @dev Can be called by anyone when a loan's HF is below the liquidation threshold.
      */
     function liquidate(address loan) external {
-        // 1. Checks:
-        //    - require(injectedAssets[loan].amount > 0, "NoInjectedAssets");
-        //    - Possible only when capital has been injected
-        //    - Get loan's Health Factor.
-        //    - require(HF < liquidationThreshold, "HealthFactorTooLow");
-        //
-        // 2. Interactions:
-        //    TODO: Ask how to actually implemnt this
-        //      - This is what LLM has written me:
-        //
-        //    - This is the complex part   
-        //    - Initiate a flashloan for the debt asset.
-        //    - In the callback, liquidate the position via the LoanWrapper.
-        //    - Swap the received collateral back to the debt asset.
-        //    - Repay the flashloan.
-        //    - Ensure the operation was profitable.
+        
     }
 
     function _swapPyUsdToEth(uint256 amountIn) private returns (uint256) {
