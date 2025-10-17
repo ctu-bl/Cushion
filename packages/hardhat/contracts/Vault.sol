@@ -67,7 +67,7 @@ contract Vault is ERC4626, Ownable {
     // More errors maybe ???
 
     // ------------------CONSTANTS------------------
-    address public constant PYUSD_TOKEN = 0x165834e1431551087342775167765c125860d5B1; // TODO: I think this is the correct address, need to fix it maybe
+    address public constant PYUSD_TOKEN = 0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9; // PYUSD on Sepolia
     address public constant WETH_TOKEN = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH na Sepolia
     ISwapRouter public constant SWAP_ROUTER = ISwapRouter(0x3bFA4769Fb09E13F390230Aad1E1645803B2a936); // Uniswap V3 Router na Sepolia
     IChainlinkAggregator public constant ETH_USD_FEED = IChainlinkAggregator(0x694AA1769357215DE4FAC081bf1f309aDC325306); // Chainlink ETH/USD on Sepolia

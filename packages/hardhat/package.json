@@ -13,7 +13,7 @@
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.ts",
     "flatten": "hardhat flatten",
-    "fork": "MAINNET_FORKING_ENABLED=true hardhat node",
+    "fork": "SEPOLIA_FORKING_ENABLED=true hardhat node",
     "format": "prettier --write './**/*.(ts|sol)'",
     "generate": "yarn account:generate",
     "hardhat-verify": "hardhat verify",
