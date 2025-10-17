@@ -29,6 +29,10 @@ export const menuLinks: HeaderMenuLink[] = [
     href: "/vault",
   },
   {
+    label: "Simulation",
+    href: "/simulation",
+  },
+  {
     label: "About",
     href: "/about",
   },
