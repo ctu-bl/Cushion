@@ -1,5 +1,6 @@
 from web3 import Web3
 import json
+import time
 
 # === Connect to Anvil RPC ===
 w3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
@@ -83,8 +84,8 @@ ABI_Vault = [
 vault_contract = w3.eth.contract(address=Vault_ADDRESS, abi=ABI_Vault)
 LoanWrapperRegistry_contract = w3.eth.contract(address=LoanWrapperRegistry_ADDRESS, abi=ABI_LoanWrapperRegistry)
 
-
 # loanWrapper_contract = w3.eth.contract(address=LoanWrapper_ADDRESS, abi=ABI_LoanWrapper)
+
 
 # === Pomocné funkce ===
 def send_tx(tx):
@@ -180,16 +181,55 @@ def is_locked(LoanWrapper_address: str):
     print(f"Loan wrapper locked: {locked}")
     return locked
 
+
+
+HF_INJECT_THRESHOLD = 1.15
+HF_LIQUIDATE_TRESHOLD = 1.4
+HF_WITHDRAW_THRESHOLD = 2.5
+CHECK_INTERVAL = 10  # seconds
+
+def monitoring():
+    print("=== Loan Monitor started ===")
+    while True:
+        try:
+            wrappers = get_all_wrappers()
+            if not wrappers:
+                print("Address pool is empty")
+            for wrapper in wrappers:
+                hf = get_hf(wrapper)
+                locked = is_locked(wrapper)
+
+                print(f"[{time.strftime('%H:%M:%S')}] Wrapper: {wrapper} | HF: {hf} | Locked: {locked}")
+
+                if hf < HF_INJECT_THRESHOLD:
+                    if locked:
+                        print(f"HF ({hf}) < {HF_INJECT_THRESHOLD} → liquidate({wrapper})")
+                        liquidate(wrapper)
+                    else:
+                        print(f"HF ({hf}) < {HF_INJECT_THRESHOLD} → inject_to_loan({wrapper})")
+                        inject_to_loan(wrapper)
+
+                elif hf < HF_LIQUIDATE_TRESHOLD:
+                    if locked:
+                        print(f"HF ({hf}) < {HF_LIQUIDATE_TRESHOLD} → liquidate({wrapper})")
+                        liquidate(wrapper)
+
+                elif hf < HF_WITHDRAW_THRESHOLD:
+                    print(f"HF ({hf}) < {HF_WITHDRAW_THRESHOLD} → ({wrapper})")
+
+                else:
+                    if locked:
+                        print(f"HF ({hf}) < {HF_LIQUIDATE_TRESHOLD} → withdraw from loan({wrapper})")
+                        withdraw_from_loan(wrapper)
+
+            print(f"Wait {CHECK_INTERVAL} seconds...\n")
+            time.sleep(CHECK_INTERVAL)
+
+        except Exception as e:
+            print(f"Error: {e}")
+            print(f"Wait again {CHECK_INTERVAL} seconds...\n")
+            time.sleep(CHECK_INTERVAL)
+
+
 if __name__ == "__main__":
-    print("Account address:", ACCOUNT.address)
-    # retrieve_value()
-    # store_value(10)
-    # retrieve_value()
-    # plus_one()
-    # retrieve_value()
-    # while True:
-    #     i = 0
-    #     while i < 10:
-    #         retrieve_value()
-    #         i = i + 1
-    #     plus_one()
+    monitoring()
