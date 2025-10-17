@@ -28,10 +28,9 @@ const config: HardhatUserConfig = {
     // View the networks that are pre-configured.
     // If the network you are looking for is not here you can add new network settings
     hardhat: {
-      type: "edr-simulated",
+      type: "edr-simulated" as const,
       forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${providerApiKey}`,
-        enabled: process.env.MAINNET_FORKING_ENABLED === "true",
+        url: `https://eth-sepolia.g.alchemy.com/v2/${providerApiKey}`,
       },
     },
     mainnet: {
