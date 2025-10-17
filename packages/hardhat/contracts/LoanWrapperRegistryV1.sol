@@ -17,6 +17,7 @@ interface IERC20 {
     function allowance(address,address) external view returns (uint256);
     function approve(address,uint256) external returns (bool);
     function transferFrom(address,address,uint256) external returns (bool);
+    function transfer(address to, uint256 amount) external returns (bool);
 }
 
 /**
@@ -32,6 +33,7 @@ interface IERC20 {
  */
 
 contract LoanWrapperRegistry {
+    // ------------------ERRORS------------------
     error LoanWrapperRegistry__Undercollateralized();
     error LoanWrapperRegistry__TokensNotAllowed();
     error LoanWrapperRegistry__InvalidWrapper();
@@ -39,19 +41,19 @@ contract LoanWrapperRegistry {
     error LoanWrapperRegistry__NoETHSent();
     error LoanWrapperRegistry__TransferFailed();
 
+    // ------------------CONSTANTS------------------
     IPoolAddressesProvider public immutable provider; // <AAVE_ADDRESSES_PROVIDER_SEPOLIA>
     address public immutable vault;
-
     address public immutable WETH;         // underlying WETH
     address public immutable USDC;         // underlying USDC
 
-
+    // ------------------STATE VARIABLES------------------
     mapping(address => address) public wrapperOf;     // borrowerEOA => LoanWrapper
     address[] public allWrappers;
 
+    // ------------------EVENTS------------------
     /// @notice Emitted when the loan is wrapped
     event LoanWrapped(address indexed owner, address indexed loanAddress, uint256 strike, address collateralToken);
-
     /// @notice Emitted when the loan is repaid
     event LoanRepaid(address indexed owner, address indexed loanAddress, uint256 strike, address collateralToken, address indexed performedBy);
 
@@ -100,27 +102,6 @@ contract LoanWrapperRegistry {
 
 
     /**
-     * @notice Repay a loan and burn its corresponding ERC721.
-     * @param expiryTime Expiry timestamp of the loan being repaid.
-     * @param strike Strike or principal amount of the loan.
-     * @param collateralToken Address of the collateral token.
-     * @notice Redeemed collateral receives whoever calls this function
-     *
-     * @dev Burns the ERC721 and updates state to reflect loan repayment. Emits {LoanRepaid}
-     * @dev Owner can execute this function only when the HF isn't below the threshold
-     */
-    function repayLoan(uint64 expiryTime, address wrapper, address collateralToken) public {
-        // --Checks--
-        if(msg.sender != vault || msg.sender != LoanWrapper(wrapper).owner()) { // idk if this works -> getter owner
-            revert LoanWrapper__AccessDenied();
-        }
-        // --Effects--
-        // --Interactions--
-    }
-
-
-
-    /**
      * @notice Returns array of all LoanWrapper addresses created by this registry
      * @param borrowerEOA Address of the borrower whose wrapper is requested.
      */
@@ -137,8 +118,8 @@ contract LoanWrapperRegistry {
 
     function checkHF(address wrapper) external view returns (bool isHealthy) {
         require(wrapper != address(0), LoanWrapperRegistry__InvalidWrapper());
-        (,,,,,uint256 hf) = IPool(provider.getPool()).getUserAccountData(wrapper);
-        return hf > 1e18; // 1.0
+        (,,,uint256 currentLiquidationThreshold,,uint256 hf) = IPool(provider.getPool()).getUserAccountData(wrapper);
+        return hf > currentLiquidationThreshold; // Check if HF is above the liquidation threshold
     }
 
 }
