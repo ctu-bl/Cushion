@@ -3,15 +3,40 @@ pragma solidity ^0.8.30;
 
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-
 
 interface ILoanWrapper {
     function getTotalCollateralValue() external view returns (uint256);
     function getTotalDebtValue() external view returns (uint256);
-    function increaseCollateral(uint256 amount) external;
+    function increaseCollateral(uint256 amount) external payable;
     function decreaseCollateral(uint256 amount) external;
+}
+
+interface ISwapRouter {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
+}
+
+// Interface pro WETH
+interface IWETH is IERC20 {
+    function deposit() external payable;
+    function withdraw(uint256 wad) external;
+}
+
+// Interface for Chainlink Price Feed
+interface IChainlinkAggregator {
+    function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }
 
 /**
@@ -38,10 +63,19 @@ contract Vault is ERC4626, Ownable {
     error Vault__AlreadyInjected();
     error Vault__FlashloanFailed();
     error Vault__InvalidThresholds();
+    error Vault__SwapFailed();
     // More errors maybe ???
 
     // ------------------CONSTANTS------------------
-    address public constant PYUSD_TOKEN = 0x165834e1431551087342775167765C125860d5b1; // TODO: I think this is the correct address, need to fix it maybe
+    address public constant PYUSD_TOKEN = 0x165834e1431551087342775167765c125860d5B1; // TODO: I think this is the correct address, need to fix it maybe
+    address public constant WETH_TOKEN = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH na Sepolia
+    ISwapRouter public constant SWAP_ROUTER = ISwapRouter(0x3bFA4769Fb09E13F390230Aad1E1645803B2a936); // Uniswap V3 Router na Sepolia
+    IChainlinkAggregator public constant ETH_USD_FEED = IChainlinkAggregator(0x694AA1769357215DE4FAC081bf1f309aDC325306); // Chainlink ETH/USD on Sepolia
+    IChainlinkAggregator public constant PYUSD_USD_FEED = IChainlinkAggregator(0x2306915A27A3a236592274A4589942A49B49742C); // Chainlink PYUSD/USD on Sepolia
+
+    /// @notice The annual interest rate charged on injected capital (1e18 precision).
+    uint256 public interestRate = 5* 1e16; // TODO: Decide to interestRate if we have decided to be 5% it should be 5 * 1e16 I think;
+    uint256 public SECONDS_PER_YEAR = 31_556_926; 
 
     // ---------------------STRUCTS----------------------
 
@@ -51,28 +85,21 @@ contract Vault is ERC4626, Ownable {
      * @param initialAccumulatedInterest The global interest index at the moment of injection.
      */
     struct InjectedCapital {
-        uint256 amount; // Original injected amount
-        uint256 initialAccumulatedInterest; // Acumulated interest with yield
+        uint256 amountPyUsd;
+        uint256 amountEthSent;
+        uint256 initialAccumulatedInterest;
     }
 
     /// @notice Mapping from a loan wrapper address to its injected capital data.
     mapping(address => InjectedCapital) public injectedAssets;
-
-    /// @notice The annual interest rate charged on injected capital (1e18 precision).
+    
    
-    uint256 public interestRate == 5* 1e16; // TODO: Decide to interestRate if we have decided to be 5% it should be 5 * 1e16 I think;
-
+    
     /// @notice The global accumulated interest index, representing the growth of capital over time.
     uint256 public accumulatedInterest;
 
     /// @notice The timestamp of the last time the accumulated interest was updated.
     uint256 public lastInterestUpdate;
-
-    /// @notice Health Factor threshold below which capital injection is permitted.
-    uint256 public injectionThreshold == ??; // TODO: Decide the 
-
-    /// @notice Health Factor threshold above which injected capital can be withdrawn.
-    uint256 public withdrawalThreshold == ??; // TODO: Decide the threshold
 
     /// @notice The total principal amount of assets currently injected across all loans.
     uint256 public totalInjectedAssets;
@@ -116,37 +143,11 @@ contract Vault is ERC4626, Ownable {
     constructor(
         string memory _name,
         string memory _symbol
-    ) ERC4626(ERC20(PYUSD_TOKEN)) ERC20(_name, _symbol) {
+    ) ERC4626(ERC20(PYUSD_TOKEN)) ERC20(_name, _symbol) Ownable(msg.sender) {
         accumulatedInterest = 1e18; // Start with an index of 1.0
         lastInterestUpdate = block.timestamp;
     }
-
-    // -------------------ADMIN FUNCTIONS-------------------
-    // Having this admin function can help us monitor at what rate we can injust the interest
-
-    /**
-     * @notice Sets the annual interest rate for injected capital.
-     * @param _newRate The new annual rate in 1e18 precision.
-     */
-    function setInterestRate(uint256 _newRate) external onlyOwner {
-        // TODO: IMPLEMENT THIS
-        interestRate = _newRate;
-        emit InterestRateSet(_newRate);
-    }
-
-    /**
-     * @notice Sets the health factor thresholds for vault operations.
-     */
-    function setThresholds(
-        uint256 _injection,
-        uint256 _withdrawal,
-        uint256 _liquidation
-    ) external onlyOwner {
-        injectionThreshold = _injection;
-        withdrawalThreshold = _withdrawal;
-        liquidationThreshold = _liquidation;
-        emit ThresholdsSet(_injection, _withdrawal, _liquidation);
-    }
+    
 
     // ------------------EXTERNAL FUNCTIONS-----------------------
     /**
@@ -155,51 +156,49 @@ contract Vault is ERC4626, Ownable {
      * @dev Can be called just with bot. Checking of HF is deleated
      */
     function injectToLoan(address loan) external {
-        // TODO: IMPLEMENT THIS
         
         updateAccumulatedInterest();
 
-        uint256 collateralValue = ILoanWrapper(loan).getTotalCollateralValue();
-        uint256 debtValue = ILoanWrapper(loan).getTotalDebtValue();
+        uint256 collateralValueUsd = ILoanWrapper(loan).getTotalCollateralValue();
+        uint256 debtValueUsd = ILoanWrapper(loan).getTotalDebtValue();
+        if (collateralValueUsd == 0) revert Vault__InvalidLoanAddress();
+        uint256 injectionAmountUsd = ((collateralValueUsd - debtValueUsd) * debtValueUsd) / collateralValueUsd / 2;
 
-        if (collateralValue == 0) revert Vault__InvalidLoanAddress();
+        if (IERC20(asset()).balanceOf(address(this)) < injectionAmountUsd) revert Vault__InsufficientLiquidity();
 
-        uint256 injectionAmountEth = ((collateralValue - debtValue) * (debtValue / collateralValue)) / 2;
-        if (asset().balanceOf(address(this)) < injectionAmountEth) revert Vault__InsufficientLiquidity();
-
-
+    
         // calculate Eth -> PyUsd
+        (, int256 pyusdPriceInt, , , ) = PYUSD_USD_FEED.latestRoundData();
+        uint256 pyusdPrice = uint256(pyusdPriceInt); // Cena má 8 des. míst
+        // Převod USD na PYUSD
+        uint256 injectionAmountPyUsd = (injectionAmountUsd * 1e18) / (pyusdPrice * 1e10);
 
+        
         // swap pyUSD -> Eth
+        uint256 amountEthOut = _swapPyUsdToEth(injectionAmountPyUsd);
         
         // send Eth to LoanWrapper
-        ILoanWrapper(loan).increaseCollateral{value: injectionAmountEth}(injectionAmountEth);
+        ILoanWrapper(loan).increaseCollateral{value: amountEthOut}(amountEthOut);
 
         // --- Efekty ---
         injectedAssets[loan] = InjectedCapital({
-            amountPyUsd: injectionAmountEth,
+            amountPyUsd: injectionAmountPyUsd,
+            amountEthSent: amountEthOut,
             initialAccumulatedInterest: accumulatedInterest
         });
-        totalInjectedAssets += injectionAmountEth;  
+
+    
+        totalInjectedAssets += amountEthOut;  
 
         // --- Interakce (Odeslání pyUSD) ---
         //asset().transfer(loan, injectionAmountEth);
         //ILoanWrapper(loan).increaseCollateral{value: injectionAmountEth}();
         
-        emit CapitalInjected(loan, injectionAmountEth);
+        emit CapitalInjected(loan, amountEthOut);
 
 
         // 1. Checks:
-        //    - Need to get HF from LoanWrapper 
-        //    - require (HF that is takne < injectionThreshold, "Still to high, will not inject");
-        //    - require (ijectedAssets[loan].amount == 0, "The Loan is Already injected");
-        //    - Calculate how much to deposit so the health factor will be good again
-        //    - require (asset.balanceOf(address(this)) >= injectionAmount, "There is not enough liquidity to inject");
-        //    
-        // 2. Effects:
         //    - Update state: store the injection amount and current `accumulatedInterest`.
-        //    - Update `totalInjectedAssets`.
-        //
         // 3. Interactions:
         //    - Transfer the asset to the loan contract.
     }
@@ -214,31 +213,20 @@ contract Vault is ERC4626, Ownable {
         updateAccumulatedInterest();
         
         InjectedCapital memory injected = injectedAssets[loan];
-        if (injected.amount == 0) revert Vault__NoInjectedAssets();
+        if (injected.amountPyUsd == 0) revert Vault__NoInjectedAssets();
         
         uint256 withdrawalAmount = currentLoanValue(loan);
-        totalInjectedAssets -= injected.amount;
+        totalInjectedAssets -= injected.amountPyUsd;
         delete injectedAssets[loan];
 
         ILoanWrapper(loan).decreaseCollateral(withdrawalAmount);
         
         emit CapitalWithdrawn(loan, withdrawalAmount);
-
-        // TODO: IMPLEMENT THIS;
-        //
-        // 1. Checks:
-        //    - require(injectedAssets[loan].amount > 0, "NoInjectedAssets");
-        //    - Possible only when capital has been injected
-        //    - Get loan's Health Factor.
-        //    - require(HF > withdrawalThreshold, "HealthFactorTooLow");
-        //
         // 2. Effects:
         //    - Calculate how much to withdraw (principal + interest).
         //    - Update `totalInjectedAssets`.
         //    - Delete the entry from `injectedAssets`.
-        //
-        // 3. Interactions:
-        //    - Call the LoanWrapper to pull the funds back to this vault.
+    
     }
 
     /**
@@ -265,9 +253,43 @@ contract Vault is ERC4626, Ownable {
         //    - Ensure the operation was profitable.
     }
 
-    function changePyUSDToEth(uint256 amount) external {
-        
+    function _swapPyUsdToEth(uint256 amountIn) private returns (uint256) {
+        IERC20(asset()).approve(address(SWAP_ROUTER), amountIn);
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: PYUSD_TOKEN,
+            tokenOut: WETH_TOKEN,
+            fee: 3000,
+            recipient: address(this),
+            deadline: block.timestamp,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        });
+        uint256 amountWethOut = SWAP_ROUTER.exactInputSingle(params);
+        if (amountWethOut == 0) revert Vault__SwapFailed();
+        IWETH(WETH_TOKEN).withdraw(amountWethOut);
+        return amountWethOut;
     }
+
+
+    function _swapEthToPyUsd(uint256 amountIn) private returns (uint256) {
+        IWETH(WETH_TOKEN).deposit{value: amountIn}();
+        IWETH(WETH_TOKEN).approve(address(SWAP_ROUTER), amountIn);
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: WETH_TOKEN,
+            tokenOut: PYUSD_TOKEN,
+            fee: 3000,
+            recipient: address(this),
+            deadline: block.timestamp,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        });
+        uint256 amountPyUsdOut = SWAP_ROUTER.exactInputSingle(params);
+        if (amountPyUsdOut == 0) revert Vault__SwapFailed();
+        return amountPyUsdOut;
+    }
+
     // -------------------VIEW AND HELPER FUNCTIONS-------------------
 
     /**
@@ -281,7 +303,7 @@ contract Vault is ERC4626, Ownable {
             uint256 interestAccrued = interestPerSecond * timeDelta;
             accumulatedInterest = accumulatedInterest.mulDiv(1e18 + interestAccrued, 1e18);
             lastInterestUpdate = block.timestamp;
-            emit InterestUpdated(accumulatedInterest);
+            emit InterestUpdated(accumulatedInterest, lastInterestUpdate);
         }
     }
 
@@ -292,7 +314,7 @@ contract Vault is ERC4626, Ownable {
     function totalAssets() public view override returns (uint256) {
         // This function should return the assets, how much is actually in the vault 
         // plus the principal amount of capital that is currently deployed in loans. 
-        return asset().balanceOf(address(this)) + totalInjectedAssets;
+        return IERC20(asset()).balanceOf(address(this)) + totalInjectedAssets;
     }
 
     /**
@@ -301,15 +323,26 @@ contract Vault is ERC4626, Ownable {
      * @return The current value of the injected capital.
      */
     function currentLoanValue(address loan) public view returns (uint256) {
-        // Implementation:
-        // 1. Get the stored injected data for the loan.
-        // 2. Calculate the interest accrued since injection:
-        //    currentValue = ((sum_of_all_collateral - sum_of_all_debt) * (sum_of_all_debt / sum_of_all_collateral)) / 2;
-        // 3. Return the result.
-        return 0; // Placeholder
+        InjectedCapital memory injected = injectedAssets[loan];
+        if (injected.amountPyUsd == 0) return 0;
+
+        uint256 currentAccInterest = accumulatedInterest;
+        if (block.timestamp > lastInterestUpdate) {
+            uint256 timeDelta = block.timestamp - lastInterestUpdate;
+            uint256 interestPerSecond = interestRate / SECONDS_PER_YEAR;
+            uint256 interestAccrued = interestPerSecond * timeDelta;
+            currentAccInterest = accumulatedInterest.mulDiv(1e18 + interestAccrued, 1e18);
+        }
+        
+        return injected.amountPyUsd.mulDiv(currentAccInterest, injected.initialAccumulatedInterest);
     }
 
-    receive() external payable {}
+    receive() external payable {
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance > 0) {
+            _swapEthToPyUsd(ethBalance);
+        }
+    }
     
     /**
      * Maybe more functions, will add it later
