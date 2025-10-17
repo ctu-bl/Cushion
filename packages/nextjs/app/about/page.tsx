@@ -79,7 +79,7 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen bg-base-200">
       <div className="container mx-auto">
-        <h1 className="text-4xl font-bold mb-4 mt-8 text-center text-base-content">About Cushion</h1>
+        <h1 className="text-5xl font-bold mb-4 mt-12 text-center text-base-content">About Cushion</h1>
         <p className="text-lg text-base-content/70 text-center max-w-3xl mx-auto mb-12">
           A decentralized liquidation protection protocol built on Aave V3, utilizing smart contract automation, ERC721
           loan wrappers, and a pyUSD-based vault system to prevent costly liquidations in DeFi lending markets.
