@@ -7,6 +7,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+
+interface ISwapAdapter {
+    function swapPyUsdToEth(address pyusd, uint256 amountPyUsd) external returns (uint256 ethOut);
+}
+
+
+
 interface ILoanWrapper {
     function getTotalCollateralValue() external view returns (uint256);
     function getTotalDebtValue() external view returns (uint256);
@@ -65,6 +72,9 @@ contract Vault is ERC4626, Ownable {
     error Vault__InvalidThresholds();
     error Vault__SwapFailed();
     // More errors maybe ???
+    ISwapAdapter public swapAdapter;
+    error Vault__SwapAdapterNotSet();
+
 
     // ------------------CONSTANTS------------------
     address public constant PYUSD_TOKEN = 0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9; // PYUSD on Sepolia
@@ -169,7 +179,7 @@ contract Vault is ERC4626, Ownable {
     
         // calculate Eth -> PyUsd
         (, int256 pyusdPriceInt, , , ) = PYUSD_USD_FEED.latestRoundData();
-        uint256 pyusdPrice = uint256(pyusdPriceInt); // Cena má 8 des. míst
+        uint256 pyusdPrice = uint256(pyusdPriceInt); 
         // Převod USD na PYUSD
         uint256 injectionAmountPyUsd = (injectionAmountUsd * 1e18) / (pyusdPrice * 1e10);
 
@@ -203,6 +213,8 @@ contract Vault is ERC4626, Ownable {
         //    - Transfer the asset to the loan contract.
     }
 
+    
+
     /**
      * @notice Withdraws previously injected capital from a recovered loan.
      * @param loan Address of the Cushion LoanWrapper.
@@ -235,14 +247,11 @@ contract Vault is ERC4626, Ownable {
      * @dev Can be called by anyone when a loan's HF is below the liquidation threshold.
      */
     function liquidate(address loan) external {
-        // 1. Checks:
-        //    - require(injectedAssets[loan].amount > 0, "NoInjectedAssets");
-        //    - Possible only when capital has been injected
-        //    - Get loan's Health Factor.
-        //    - require(HF < liquidationThreshold, "HealthFactorTooLow");
-        //
-        // 2. Interactions:
-        //    TODO: Ask how to actually implemnt this
+
+
+        
+        //emit LoanLiquidated(loan, profit);
+        
         //      - This is what LLM has written me:
         //
         //    - This is the complex part   
@@ -252,8 +261,14 @@ contract Vault is ERC4626, Ownable {
         //    - Repay the flashloan.
         //    - Ensure the operation was profitable.
     }
-
-    function _swapPyUsdToEth(uint256 amountIn) private returns (uint256) {
+    /*
+    function _swapPyUsdToEth(uint256 amountIn)internal virtual returns (uint256) {
+        if (address(swapAdapter) != address(0)) {
+        // TEST/POC větev: adapter dělá “to samé zvenčí”
+        IERC20(asset()).approve(address(swapAdapter), amountIn);
+        uint256 ethOut = ISwapAdapter(swapAdapter).swapPyUsdToEth(asset(), amountIn);
+        return ethOut;
+    }
         IERC20(asset()).approve(address(SWAP_ROUTER), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: PYUSD_TOKEN,
@@ -269,10 +284,44 @@ contract Vault is ERC4626, Ownable {
         if (amountWethOut == 0) revert Vault__SwapFailed();
         IWETH(WETH_TOKEN).withdraw(amountWethOut);
         return amountWethOut;
+    }*/
+
+    function _swapPyUsdToEth(uint256 amountIn) internal virtual returns (uint256) {
+    // TEST/POC větev – používá mock adapter (deterministický kurz)
+    if (address(swapAdapter) != address(0)) {
+        IERC20(asset()).approve(address(swapAdapter), amountIn);
+        uint256 ethOut = ISwapAdapter(swapAdapter).swapPyUsdToEth(asset(), amountIn);
+
+        IWETH(WETH_TOKEN).withdraw(ethOut);
+
+        return ethOut;
+    }
+
+    // PRODUKČNÍ větev – skutečný swap přes Uniswap router
+    IERC20(asset()).approve(address(SWAP_ROUTER), amountIn);
+
+    ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+        tokenIn: PYUSD_TOKEN,
+        tokenOut: WETH_TOKEN,
+        fee: 3000,
+        recipient: address(this),
+        deadline: block.timestamp,
+        amountIn: amountIn,
+        amountOutMinimum: 0,           // POC: 0; v produkci nastav slippage
+        sqrtPriceLimitX96: 0
+    });
+
+    uint256 amountWethOut = SWAP_ROUTER.exactInputSingle(params);
+    if (amountWethOut == 0) revert Vault__SwapFailed();
+
+    // převod WETH -> ETH pro increaseCollateral{value: ...}
+    IWETH(WETH_TOKEN).withdraw(amountWethOut);
+    return amountWethOut; // v wei (ETH)
     }
 
 
-    function _swapEthToPyUsd(uint256 amountIn) private returns (uint256) {
+
+    function _swapEthToPyUsd(uint256 amountIn) internal virtual returns (uint256) {
         IWETH(WETH_TOKEN).deposit{value: amountIn}();
         IWETH(WETH_TOKEN).approve(address(SWAP_ROUTER), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
@@ -343,7 +392,11 @@ contract Vault is ERC4626, Ownable {
             _swapEthToPyUsd(ethBalance);
         }
     }
-    
+
+    function setSwapAdapter(address a) external /* onlyOwner */ {
+    swapAdapter = ISwapAdapter(a);
+    }
+
     /**
      * Maybe more functions, will add it later
      */
