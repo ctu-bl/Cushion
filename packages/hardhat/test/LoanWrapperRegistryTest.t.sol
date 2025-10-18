@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.30;
 
-// === tvůj kontrakt (uprav import podle své struktury) ===
 import {LoanWrapperRegistry} from "../contracts/LoanWrapperRegistryV1.sol";
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {DataTypes} from "@aave/core-v3/contracts/protocol/libraries/types/DataTypes.sol";
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
+import {LoanWrapper} from "../contracts/LoanWrapper.sol";
+import {Test} from "forge-std/Test.sol";
 
 // ---------- Mocks ----------
-
 contract MockERC20 {
     string public name;
     string public symbol;
@@ -42,7 +42,6 @@ contract MockERC20 {
         return true;
     }
 
-    // test helper
     function mint(address to, uint256 amount) external { balanceOf[to] += amount; }
     function burn(address from, uint256 amount) external { require(balanceOf[from] >= amount, "burn"); balanceOf[from] -= amount; }
 }
@@ -60,12 +59,11 @@ contract MockWETH9 is MockERC20 {
     receive() external payable {}
 }
 
-// Aave Pool mock – implementuje jen to, co Registry volá
+// Aave Pool mock 
 abstract contract MockPool is IPool {
     address public immutable usdc;
     address public immutable weth;
 
-    // záznamy posledního volání pro aserty
     address public lastDepositAsset;
     uint256 public lastDepositAmount;
     address public lastDepositOnBehalfOf;
@@ -75,24 +73,20 @@ abstract contract MockPool is IPool {
     address public lastBorrowOnBehalfOf;
     uint256 public lastBorrowRateMode;
 
-    mapping(address => uint256) public debtByUser; // velmi zjednodušené
+    mapping(address => uint256) public debtByUser; 
 
     constructor(address _usdc, address _weth) { usdc = _usdc; weth = _weth; }
 
-    // --- IPool funkce, co používáme ---
 
     function deposit(address asset, uint256 amount, address onBehalfOf, uint16 /*referral*/ ) external override {
-        // Aave si stáhne underlying z msg.sender
         MockERC20(asset).transferFrom(msg.sender, address(this), amount);
         lastDepositAsset = asset;
         lastDepositAmount = amount;
         lastDepositOnBehalfOf = onBehalfOf;
-        // (aToken mint neřešíme; pro test nám stačí záznamy)
     }
 
     function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 /*referral*/, address onBehalfOf) external override {
         require(asset == usdc, "only USDC in mock");
-        // Mint USDC volajícímu (msg.sender) – tak to dělá reálný Pool
         MockERC20(usdc).mint(msg.sender, amount);
         lastBorrowAsset = asset;
         lastBorrowAmount = amount;
@@ -101,7 +95,6 @@ abstract contract MockPool is IPool {
         debtByUser[onBehalfOf] += amount;
     }
 
-    // vrátíme jednoduché HF > 1 pro wrapper
     function getUserAccountData(address user) external view override returns (
         uint256 totalCollateralBase,
         uint256 totalDebtBase,
@@ -110,7 +103,7 @@ abstract contract MockPool is IPool {
         uint256 ltv,
         uint256 healthFactor
     ) {
-        // fake metriky: pokud má user dluh, vraťme HF 2e18, jinak 10e18
+        // fake metrics
         uint256 debt = debtByUser[user];
         totalDebtBase = debt;
         totalCollateralBase = debt * 2;
@@ -120,7 +113,7 @@ abstract contract MockPool is IPool {
         healthFactor = debt > 0 ? 2e18 : 10e18;
     }
 
-    // nepoužívané v těchto testech – dummy implementace pro kompilaci
+    // dummy implementations for compilation
     function mintUnbacked(address, uint256, address, uint16) external pure override {}
     function backUnbacked(address, uint256, uint256) external pure override returns (uint256) { return 0; }
     function withdraw(address, uint256, address) external pure override returns (uint256) { return 0; }
@@ -141,7 +134,7 @@ abstract contract MockPool is IPool {
     function getReservesList() external pure override returns (address[] memory) { return new address[](0); }
     function getReserveNormalizedIncome(address) external pure override returns (uint256) { return 1e27; }
     function getReserveNormalizedVariableDebt(address) external pure override returns (uint256) { return 1e27; }
-    function getReserveData(address) external pure override returns (DataTypes.ReserveData memory) { revert(); }
+    function getReserveData(address) external view virtual returns (DataTypes.ReserveData memory) { revert(); }
     function getReserveAddressById(uint16) external pure override returns (address) { return address(0); }
     function ADDRESSES_PROVIDER() external pure override returns (IPoolAddressesProvider) { revert(); }
     function updateBridgeProtocolFee(uint256) external pure override {}
@@ -165,19 +158,44 @@ abstract contract MockPool is IPool {
     function setReserveInterestRateStrategyAddress(address, address) external pure override {}
 }
 
-// Konkrétní implementace MockPool pro testy
-contract MockPoolImpl is MockPool {
-    constructor(address _usdc, address _weth) MockPool(_usdc, _weth) {}
+interface IDelegationToken {
+    function approveDelegation(address delegatee, uint256 amount) external;
 }
 
-// Provider mock – vrací náš MockPool
+contract MockVariableDebtToken is IDelegationToken {
+    mapping(address => mapping(address => uint256)) public borrowAllowance;
+
+    function approveDelegation(address delegatee, uint256 amount) external override {
+        borrowAllowance[msg.sender][delegatee] = amount; // pro úplnost
+    }
+}
+
+contract MockPoolImpl is MockPool {
+    address public varDebt;
+
+    constructor(address _usdc, address _weth) MockPool(_usdc, _weth) {
+        varDebt = address(new MockVariableDebtToken());
+    }
+
+    function getReserveData(address asset)
+        external
+        view
+        override
+        returns (DataTypes.ReserveData memory d)
+    {
+        require(asset == usdc /*|| asset == weth*/, "unknown asset");
+        d.variableDebtTokenAddress = varDebt;
+    }
+}
+
+// Provider mock 
 contract MockProvider is IPoolAddressesProvider {
     address public pool;
     constructor(address _pool) { pool = _pool; }
     
     function getPool() external view override returns (address) { return pool; }
     
-    // dummy implementace zbytku interfacu
+    // dummy implementations for compilation
     function getMarketId() external pure override returns (string memory) { return ""; }
     function setMarketId(string calldata) external pure override {}
     function getAddress(bytes32) external pure override returns (address) { return address(0); }
@@ -198,15 +216,10 @@ contract MockProvider is IPoolAddressesProvider {
     function setPoolDataProvider(address) external pure override {}
 }
 
-// LoanWrapper stub – jen aby šel Registry zkompilovat/deploynout
-contract LoanWrapper {
-    constructor(address /*owner*/, uint256 /*collateral*/, uint256 /*amount*/, address /*vault*/, address /*weth*/, address /*usdc*/, address /*provider*/) {}
-}
 
-// ---------- Testy ----------
+// ---------- Tests ----------
 
-contract LoanWrapperRegistrySolidityTest {
-    // helper pro izolovaný deploy
+contract LoanWrapperRegistrySolidityTest is Test{
     function _deploy() internal returns (
         LoanWrapperRegistry registry,
         MockPoolImpl pool,
@@ -221,7 +234,6 @@ contract LoanWrapperRegistrySolidityTest {
         registry = new LoanWrapperRegistry(address(provider), address(0), address(weth), address(usdc));
     }
 
-    // happy path: wrapLoan -> aWETH onBehalfOf wrapper, borrow USDC onBehalfOf wrapper, USDC posláno borrowerovi
     function testWrapLoanHappyPath() public {
         (LoanWrapperRegistry registry, MockPoolImpl pool, , MockWETH9 weth, MockERC20 usdc) = _deploy();
 
@@ -229,31 +241,26 @@ contract LoanWrapperRegistrySolidityTest {
         uint256 ethCollateral = 5 ether;
         uint256 borrowUSDC    = 1_000_000; // 1,000,000 wei USDC (6 dec)
 
-        // zavolej wrapLoan s ETH
         registry.wrapLoan{value: ethCollateral}(borrower, borrowUSDC);
 
-        // 1) Registry už nemá WETH – Pool si ho strhnul v depositu
         require(weth.balanceOf(address(registry)) == 0, "registry still holds WETH");
 
-        // 2) Pool zaznamenal deposit onBehalfOf = wrapper
         address wrapper = registry.wrapperOf(borrower);
         require(wrapper != address(0), "wrapper not stored");
         require(pool.lastDepositOnBehalfOf() == wrapper, "deposit not on wrapper");
         require(pool.lastDepositAsset() == address(weth), "deposit asset != WETH");
         require(pool.lastDepositAmount() == ethCollateral, "deposit amount mismatch");
 
-        // 3) Pool zaznamenal borrow onBehalfOf = wrapper, rateMode=2
         require(pool.lastBorrowOnBehalfOf() == wrapper, "borrow not on wrapper");
         require(pool.lastBorrowAsset() == address(usdc), "borrow asset != USDC");
         require(pool.lastBorrowAmount() == borrowUSDC, "borrow amount mismatch");
         require(pool.lastBorrowRateMode() == 2, "rateMode != VARIABLE");
 
-        // 4) Borrower obdržel USDC, registry by měla mít 0
         require(usdc.balanceOf(borrower) == borrowUSDC, "borrower USDC not received");
         require(usdc.balanceOf(address(registry)) == 0, "registry still holds USDC");
     }
 
-    // wrapLoan bez ETH musí revertnout
+
     function testWrapLoanRevertsWithoutETH() public {
         (LoanWrapperRegistry registry, , , , ) = _deploy();
         address borrower = address(0xB0bb);
@@ -266,9 +273,8 @@ contract LoanWrapperRegistrySolidityTest {
         require(!ok, "expected revert when no ETH sent");
     }
 
-    // sanity: getHF a checkHF něco vrací pro wrappera po wrapLoan
     function testGetHFAndCheckHF() public {
-        (LoanWrapperRegistry registry, , MockProvider provider, , ) = _deploy();
+        (LoanWrapperRegistry registry, , , , ) = _deploy();
         address borrower = address(0xB0bb);
 
         registry.wrapLoan{value: 1 ether}(borrower, 1_000_000);
@@ -281,6 +287,71 @@ contract LoanWrapperRegistrySolidityTest {
         require(healthy, "expected healthy");
     }
 
-    // umožní test kontraktu přijímat ETH z WETH.withdraw() apod.
+    function testIfBorrowerIsIndexedAfterWrapLoan() public{
+        (LoanWrapperRegistry registry, , , ,) = _deploy();
+
+        address borrower = address(0xB0bb);
+        uint256 ethCollateral = 5 ether;
+        uint256 borrowUSDC    = 1_000_000;
+
+        registry.wrapLoan{value: ethCollateral}(borrower, borrowUSDC);
+
+        address wrapper = registry.wrapperOf(borrower);
+        address indexedBorrower = LoanWrapper(wrapper).owner();
+
+        require(indexedBorrower == borrower, "borrower not indexed correctly");
+        require(wrapper != address(0), "wrapper not created");
+
+    }
+
+    function testMoreThatOneBorrows() public {
+        (LoanWrapperRegistry registry, MockPoolImpl pool, , ,) = _deploy();
+
+        address borrower1 = address(0xB0bb);
+        uint256 ethCollateral1 = 5 ether;
+        uint256 borrowUSDC1    = 1_000_000;
+
+        address borrower2 = address(0xC0de);
+        uint256 ethCollateral2 = 3 ether;
+        uint256 borrowUSDC2    = 500_000;
+
+        registry.wrapLoan{value: ethCollateral1}(borrower1, borrowUSDC1);
+
+        registry.wrapLoan{value: ethCollateral2}(borrower2, borrowUSDC2);
+
+        address wrapper1 = registry.wrapperOf(borrower1);
+        address indexedBorrower1 = LoanWrapper(wrapper1).owner();
+
+        address wrapper2 = registry.wrapperOf(borrower2);
+        address indexedBorrower2 = LoanWrapper(wrapper2).owner();
+
+        address lastWrapper = pool.lastBorrowOnBehalfOf();
+
+        require(indexedBorrower1 == borrower1, "borrower1 not indexed correctly");
+        require(wrapper1 != address(0), "wrapper1 not created");
+
+        require(indexedBorrower2 == borrower2, "borrower2 not indexed correctly");
+        require(wrapper2 != address(0), "wrapper2 not created");
+
+        require(lastWrapper == wrapper2, "Wrapper 2 was not created successfully");
+    }
+
+    function testWrongAssetsEntered() public {
+        (LoanWrapperRegistry registry, , , ,) = _deploy();
+
+        LoanWrapperRegistry wrongRegistry = new LoanWrapperRegistry(address(registry.provider()), address(0), address(0), address(0));
+
+        address borrower = address(0xB0bb);
+        uint256 borrowUSDC = 1_000_000;
+
+        (bool ok, ) = address(wrongRegistry).call(
+            abi.encodeWithSelector(wrongRegistry.wrapLoan.selector, borrower, borrowUSDC)
+        );
+        require(!ok, "expected revert when wrong assets set");
+    }
+
+
+
+
     receive() external payable {}
 }
