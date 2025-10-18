@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.30;
 
+import "hardhat/console.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,6 +18,7 @@ interface IDelegationToken {
 interface IWETH9 {
     function deposit() external payable;
     function withdraw(uint256) external;
+    function transfer(address, uint256) external;
 }
 
 
@@ -39,6 +41,8 @@ contract LoanWrapper is Ownable {
     error LoanWrapper__InsufficientAllowance();
     error LoanWrapper__InvalidAmount();
     error LoanWrapper__NothingToRepay();
+    error LoanWrapper__NotAccesibleForInvestor();
+    error LoanWrapper__WithdrawFailed();
 
     // ------------------CONSTANTS------------------
     address private VAULT;
@@ -126,6 +130,18 @@ contract LoanWrapper is Ownable {
         _;
     }
 
+    modifier allowOnThreshold() {
+        IPool pool = IPool(PROVIDER.getPool());
+        (, , , , , uint256 hf) = pool.getUserAccountData(address(this));
+        if (s_investor != address(0)) {
+            revert LoanWrapper__AccessDenied();
+        }
+        if (msg.sender != owner() && hf > LOCKING_THRESHOLD) {
+            revert LoanWrapper__NotAccesibleForInvestor();
+        }
+        _;
+    }
+
     // ------------------PUBLIC FUNCTIONS------------------
 
     // ------------------EXTERNAL AND VIEW FUNCTIONS------------------
@@ -136,25 +152,29 @@ contract LoanWrapper is Ownable {
      * 
      * @dev Owner can execute this function only when the HF isn't below the threshold
      */
-    function increaseCollateral(uint256 amount) external payable {
+    function increaseCollateral(uint256 amount) external payable allowOnThreshold {
         // --Checks--
-        if (msg.sender == owner() && locked) {
+        if (locked) {
             revert LoanWrapper__WrapperNotUnlocked();
         }
-        if (s_investor != address(0) || (msg.sender != owner() && !locked)) {
-            revert LoanWrapper__AccessDenied();
-        }
-        if (amount < 0) {
+        if (amount <= 0) {
             revert LoanWrapper__InvalidAmount();
         }
         if (msg.value < amount) {
             revert LoanWrapper__InsufficientAllowance();
         }
         // --Effects--
+        IPool pool = IPool(PROVIDER.getPool());
+        if (msg.sender != owner()) {
+            s_investor = msg.sender;
+            s_investorCollateral = amount;
+            lockWrapper();
+        } else {
+            s_initCollateral += amount;
+        }
         IWETH9(COL_TOKEN_ADDR).deposit{value: msg.value}();
-        s_investor = msg.sender;
-        s_investorCollateral = amount;
-        lockWrapper();
+        IERC20(COL_TOKEN_ADDR).approve(address(pool), msg.value);
+        pool.deposit(COL_TOKEN_ADDR, amount, address(this), 0);
         // --Interactions--
         emit CollateralIncreased(address(this), msg.sender, amount);
     }
@@ -172,11 +192,11 @@ contract LoanWrapper is Ownable {
         if (msg.sender == owner() && locked) {
             revert LoanWrapper__WrapperNotUnlocked();
         }
-        if (msg.sender != owner() && !locked) {
-            revert LoanWrapper__AccessDenied();
-        }
         // Conversions?
-        if (amount < 0 || amount > s_initCollateral) {
+        if (amount <= 0 || (amount > s_initCollateral) && msg.sender == owner()) {
+            revert LoanWrapper__InvalidAmount();
+        }
+        if ((amount > s_investorCollateral)  && msg.sender == s_investor) {
             revert LoanWrapper__InvalidAmount();
         }
         int256 negativeCol = -int256(amount);
@@ -186,11 +206,19 @@ contract LoanWrapper is Ownable {
             revert LoanWrapper__BreaksHealthFactor();
         }
         // --Effects--
-        IWETH9(COL_TOKEN_ADDR).withdraw(amount);
-        s_investorCollateral -= amount;
-        s_investor = address(0);
-        unlockWrapper();
-        // Return tokens back to the owner?
+        if (msg.sender == s_investor) {
+            IWETH9(COL_TOKEN_ADDR).withdraw(amount);
+            s_investorCollateral -= amount;
+            s_investor = address(0);
+            unlockWrapper();
+        } else {
+            IWETH9(COL_TOKEN_ADDR).withdraw(amount);
+            s_initCollateral -= amount;
+        }
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        if (!success) {
+            revert LoanWrapper__WithdrawFailed();
+        }
         // --Interactions--
         emit CollateralDecreased(address(this), msg.sender, amount);
     }
@@ -205,7 +233,7 @@ contract LoanWrapper is Ownable {
      */
     function increaseDebt(uint256 amount) external onlyOwner wrapperUnlocked {
         // --Checks--
-        if (amount < 0) {
+        if (amount <= 0) {
             revert LoanWrapper__InvalidAmount();
         }
         int256 positiveAmount = int256(amount);
@@ -216,8 +244,8 @@ contract LoanWrapper is Ownable {
         }
         // --Effects--
         
-        pool.borrow(DEBT_TOKEN_ADDR, amount * 1e18, 2, 0, address(this));
-        IERC20(DEBT_TOKEN_ADDR).transfer(owner(), amount * 1e18);
+        pool.borrow(DEBT_TOKEN_ADDR, amount, 2, 0, address(this));
+        IERC20(DEBT_TOKEN_ADDR).transfer(owner(), amount);
         s_borrowedAmount += amount;
         // --Interactions--
         emit DebtIncreased(address(this), s_borrowedAmount);
@@ -233,31 +261,34 @@ contract LoanWrapper is Ownable {
     function decreaseDebt(uint256 amount) external onlyOwner wrapperUnlocked {
         // --Checks--
         // Conversions?
-        if (amount < 0 || amount > s_borrowedAmount) {
+        if (amount <= 0 || amount > s_borrowedAmount) {
             revert LoanWrapper__InvalidAmount();
         }
 
         // --Effects--
-        IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), amount * 1e18);
+        IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), amount);
         IPool pool = IPool(PROVIDER.getPool());
-        pool.repay(DEBT_TOKEN_ADDR, amount * 1e18, 2, address(this));
+        pool.repay(DEBT_TOKEN_ADDR, amount, 2, address(this));
         s_borrowedAmount -= amount;
         // --Interactions--
         emit DebtDecreased(address(this), s_borrowedAmount);
     }
-
+    /// @notice This function can be called ONLY AND ONLY if there is sufficient balance
+    // in the Vault to repay the loan
     function repayLoan() external {
         // --Checks--
-        if (s_borrowedAmount < 0) {
+        if (s_borrowedAmount <= 0) {
             revert LoanWrapper__NothingToRepay();
         }
         if (msg.sender != VAULT) {
             revert LoanWrapper__AccessDenied();
         }
         // --Effects--
-        IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), s_borrowedAmount * 1e18);
+        IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), s_borrowedAmount);
         IPool pool = IPool(PROVIDER.getPool());
-        pool.repay(DEBT_TOKEN_ADDR, s_borrowedAmount * 1e18, 2, address(this));
+        // Hopefully type(uint256).max is correct. It was in repay() desc on AAVE
+        pool.repay(DEBT_TOKEN_ADDR, type(uint256).max, 2, address(this));
+        s_borrowedAmount = 0;
         // --Interactions--
         emit LoanRepaid(address(this));
     }
@@ -274,6 +305,16 @@ contract LoanWrapper is Ownable {
     function getTotalDebtValue() external view returns (uint256) {
         return s_borrowedAmount;
     }
+
+    function getOwnerCollateralValue() external view returns (uint256) {
+        return s_initCollateral;
+    }
+
+    function getInvestorCollateralValue() external view returns (uint256) {
+        return s_investorCollateral;
+    }
+
+    receive() external payable {}
 
     // ------------------PRIVATE AND INTERNAL FUNCTIONS------------------
     // Can be merged into one function... What is better approach?
@@ -303,15 +344,25 @@ contract LoanWrapper is Ownable {
         int256 collateralChange,
         int256 debtChange
     ) private pure returns (uint256) {
-        int256 newCollateral = int256(totalCollateralBase) + collateralChange * 1e18;
-        int256 newDebt = int256(totalDebtBase) + debtChange * 1e18;
+        int256 newCollateral = int256(totalCollateralBase) + collateralChange;
+        int256 newDebt = int256(totalDebtBase) + debtChange;
         if (newDebt <= 0) {
             return type(uint256).max;
         }
         if (newCollateral <= 0) {
             return 0;
         }
-        uint256 hf = uint256(newCollateral) * currentLiquidationThreshold / (uint256(newDebt) * 1e4);
+        uint256 hf = uint256(newCollateral) * currentLiquidationThreshold / uint256(newDebt);
         return hf;
+    }
+
+    function testComputeHF(
+        uint256 totalCollateralBase,
+        uint256 totalDebtBase,
+        uint256 currentLiquidationThreshold,
+        int256 collateralChange,
+        int256 debtChange
+    ) public pure returns (uint256) {
+        return computeHF(totalCollateralBase, totalDebtBase, currentLiquidationThreshold, collateralChange, debtChange);
     }
 }
