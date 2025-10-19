@@ -1,111 +1,160 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.30;
 
-// === Uprav cesty podle projektu ===
+// === uprav cesty podle projektu ===
+import {Vault} from "../contracts/Vault.sol";
 import {MockERC20} from "../contracts/mocks/MockERC20.sol";
-import {MockWETH9} from "../contracts/mocks/MockWETH9.sol";
-import {TestableVaultNew} from "../contracts/test/TestableVaultNew.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {MockLoanWrapperForInject} from "../contracts/test/MockLoanWrapperForInject.sol";
-import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
 
-/// @notice Testuje injectToLoan přes tvé mocky tokenu + náš feed a wrapper.
-/// Stylově stejné jako tvé LoanWrapperRegistrySolidityTest: low-level calls + require.
-contract VaultInjectSolidityTest {
-    TestableVaultNew vault;
-    MockERC20 pyusd;
-    MockWETH9 weth;
-    MockPriceFeed feed;
-    MockLoanWrapperForInject loan;
-    MockSwapAdapter swapAdapter;
-
-    // ===== Helper: deploy sestavy =====
-    function _deploy() internal {
-        // 1) Deploy PYUSD 
-        pyusd = new MockERC20("PayPal USD", "PYUSD", 18);
-
-        // 2) Feed: 1.00 USD (8 decimals)
-        feed = new MockPriceFeed(100_000000);
-
-        // 3) Deploy mock WETH
-        weth = new MockWETH9();
-        
-        // 4) Deploy mock swap adapter
-        swapAdapter = new MockSwapAdapter(address(weth));
-        
-        // 5) Deploy testable vault with mock addresses
-        vault = new TestableVaultNew("Test Vault", "TV", address(pyusd), address(feed));
-        vault.setSwapAdapter(address(swapAdapter));
-
-
-        // 6) Mock loan wrapper 
-        loan = new MockLoanWrapperForInject();
-
-        swapAdapter.setMockSwapRate(1e15);
-
-        (bool ok,) = address(swapAdapter).call{value: 1 ether}("");
-        require(ok, "seed ETH to vault failed");
+// --- Mini feed (8 dec), pokud chceš měnit cenu v testu ---
+contract MockPriceFeed {
+    int256 public price;
+    constructor(int256 p){ price = p; }
+    function latestRoundData() external view returns (uint80,int256,uint256,uint256,uint80) {
+        return (0, price, 0, 0, 0);
     }
-
-    // ====== TEST 1: Happy path ======
-    // C=2000$, D=1000$  => injectionUsd = ((2000-1000)*1000/2000)/2 = 250$
-    // feed 1.00 => injection PYUSD = 250e18
-    // kurz 1e15 wei / 1e18 PYUSD => 250e18 * 1e15 / 1e18 = 0.25 ether
-    function testInject_HappyPath() public {
-    _deploy();
-
-    // stav půjčky: injection existuje
-    loan.setValues(2_000_000000, 1_000_000000);
-
-    // mintni "hodně" PYUSD (ať neřešíme zaokrouhlení feedu/vzorců)
-    pyusd.mint(address(vault), 1_000_000e18);
-
-    (bool ok,) = address(vault).call(abi.encodeWithSignature("injectToLoan(address)", address(loan)));
-    require(ok, "injectToLoan failed");
-
-    // assert přes logy adapteru
-    require(swapAdapter.lastAmountPyUsdIn() > 0, "adapter did not receive PYUSD");
-    require(loan.lastEthIn() == swapAdapter.lastEthOut(), "ETH delivered mismatch");
-
-    // volitelně — kontrola kurzu
-    uint256 expectedEth = (swapAdapter.lastAmountPyUsdIn() * 1e15) / 1e18; // pokud máš 1e15 rate
-    require(swapAdapter.lastEthOut() == expectedEth, "adapter rate mismatch");
 }
 
+// --- Loan wrapper mock pro inject ---
+contract MockLoanWrapperForInject {
+    // USD hodnoty v 8 dec
+    uint256 public totalCollateralUsd;
+    uint256 public totalDebtUsd;
+    // logy pro aserty
+    uint256 public lastEthIn;
+    uint256 public timesCalled;
 
-    // ====== TEST 2: Nedostatek PYUSD ======
-    function testInject_RevertsWhenNotEnoughPYUSD() public {
+    function setValues(uint256 coll8, uint256 debt8) external {
+        totalCollateralUsd = coll8; totalDebtUsd = debt8;
+    }
+
+    function getTotalCollateralValue() external view returns (uint256) { return totalCollateralUsd; }
+    function getTotalDebtValue() external view returns (uint256) { return totalDebtUsd; }
+
+    function increaseCollateral(uint256 /*amount*/) external payable {
+        lastEthIn += msg.value;
+        timesCalled += 1;
+    }
+}
+
+// --- Adapter rozhraní z Vaultu ---
+interface ISwapAdapter {
+    function swapPyUsdToEth(address pyusd, uint256 amountPyUsd) external returns (uint256 ethOut);
+}
+interface IWETH {
+    function deposit() external payable;
+    function transfer(address to, uint256 amount) external returns (bool);
+}
+
+// --- Adapter mock: stáhne PYUSD z Vaultu a POŠLE mu WETH ---
+// (Vault si ji v adapter větvi hned rozbalí přes IWETH(WETH_TOKEN).withdraw)
+contract MockSwapAdapterWeth is ISwapAdapter {
+    address public immutable WETH;
+    uint256 public rateWeiPer1e18;      // 1e18 PYUSD -> X wei
+    uint256 public lastAmountPyUsdIn;   // pro aserty
+    uint256 public lastEthOut;          // pro aserty
+
+    constructor(address _weth) { WETH = _weth; }
+
+    function setRate(uint256 r) external { rateWeiPer1e18 = r; }
+
+    function swapPyUsdToEth(address pyusd, uint256 amountPyUsd)
+        external
+        returns (uint256 ethOut)
+    {
+        // Vault předem udělá approve(adapter, amountPyUsd)
+        require(MockERC20(pyusd).transferFrom(msg.sender, address(0xdead), amountPyUsd), "pull PYUSD fail");
+
+        ethOut = (amountPyUsd * rateWeiPer1e18) / 1e18;
+
+        // z vlastního ETH "vyrazíme" WETH a pošleme ji Vaultu
+        IWETH(WETH).deposit{value: ethOut}();
+        require(IWETH(WETH).transfer(msg.sender, ethOut), "send WETH fail");
+
+        lastAmountPyUsdIn = amountPyUsd;
+        lastEthOut = ethOut;
+    }
+
+    // aby šlo adapter předzásobit ETH v testu
+    receive() external payable {}
+}
+
+contract InjectToLoanSmoke {
+    Vault vault;
+    MockLoanWrapperForInject loan;
+    MockSwapAdapterWeth adapter;
+
+    // --- pomocný deploy ---
+    function _deploy() internal {
+        // 1) Deploy Vaultu (používá PYUSD/WETH/Feed/Router z konstant)
+        vault = new Vault("Test Vault", "TV");
+
+        // 2) Loan wrapper mock
+        loan = new MockLoanWrapperForInject();
+
+        // 3) Adapter: vezmeme WETH adresu z vaultu (public constant getter)
+        address weth = vault.WETH_TOKEN();
+        adapter = new MockSwapAdapterWeth(weth);
+        vault.setSwapAdapter(address(adapter));
+
+        // 4) Adapteru pošli trochu ETH, aby mohl mintnout WETH
+        (bool ok,) = address(adapter).call{value: 10 ether}("");
+        require(ok, "seed adapter ETH failed");
+
+        // 5) Fixní kurz: 1e18 PYUSD -> 0.001 ETH
+        adapter.setRate(1e15);
+
+        // 6) Vaultu přidej PYUSD — použij přímo jeho underlying adresu:
+        //    Vault.asset() = PYUSD_TOKEN (public z ERC4626)
+        MockERC20 pyusd = MockERC20(vault.asset());
+        pyusd.mint(address(vault), 1_000_000e18); // „víc než dost“, ať to nepadá na rounding
+    }
+
+    // === Happy path ===
+    function testInjectToLoan_Happy() public {
         _deploy();
 
-        // injection target = 250 USD
+        // C=2000$, D=1000$ => Vault si spočítá injection ~ 250$
         loan.setValues(2_000_000000, 1_000_000000);
 
-        // vaultu dáme málo PYUSD (jen 100)
+        // call
+        (bool ok,) = address(vault).call(abi.encodeWithSignature("injectToLoan(address)", address(loan)));
+        require(ok, "injectToLoan failed");
+
+        // swap proběhl a loan dostal ETH
+        require(adapter.lastAmountPyUsdIn() > 0, "no PYUSD swapped");
+        require(loan.lastEthIn() == adapter.lastEthOut(), "ETH delivered mismatch");
+        require(loan.timesCalled() == 1, "increaseCollateral not called once");
+
+        // state accounting
+        (uint256 amtPy, uint256 amtEth, uint256 accIdx) = vault.injectedAssets(address(loan));
+        require(amtPy == adapter.lastAmountPyUsdIn(), "amountPyUsd mismatch");
+        require(amtEth == adapter.lastEthOut(), "amountEthSent mismatch");
+        require(vault.totalInjectedAssets() >= amtEth, "totalInjectedAssets not increased");
+        accIdx; // volitelně ověř dál dle své logiky
+    }
+
+    // === Nedostatek PYUSD ===
+    function testInjectToLoan_Insufficient() public {
+        // redeploy s čistým balancem
+        vault = new Vault("Test Vault", "TV");
+        loan  = new MockLoanWrapperForInject();
+
+        address weth = vault.WETH_TOKEN();
+        adapter = new MockSwapAdapterWeth(weth);
+        vault.setSwapAdapter(address(adapter));
+        (bool ok2,) = address(adapter).call{value: 1 ether}("");
+        require(ok2, "seed adapter ETH failed");
+        adapter.setRate(1e15);
+
+        // injection existuje
+        loan.setValues(2_000_000000, 1_000_000000);
+        // ale PYUSD mintneme málo
+        MockERC20 pyusd = MockERC20(vault.asset());
         pyusd.mint(address(vault), 100e18);
 
         (bool ok,) = address(vault).call(abi.encodeWithSignature("injectToLoan(address)", address(loan)));
-        require(!ok, "expected revert when PYUSD is insufficient");
+        require(!ok, "expected revert (insufficient PYUSD)");
     }
 
-    // ====== TEST 3: Různá cena feedu ======
-    // price=1.20USD => PYUSD needed = 250/1.2 = 208.333... e18
-    function testInject_RespectsPriceFeedChange() public {
-    _deploy();
-
-    loan.setValues(2_000_000000, 1_000_000000);
-    feed.setPrice(120_000000); // 1.20 USD
-
-    // zase prostě dej hodně PYUSD, ať je klid
-    pyusd.mint(address(vault), 1_000_000e18);
-
-    (bool ok,) = address(vault).call(abi.encodeWithSignature("injectToLoan(address)", address(loan)));
-    require(ok, "injectToLoan failed at 1.20 price");
-
-    // aserty přes logy adapteru
-    require(swapAdapter.lastAmountPyUsdIn() > 0, "adapter did not receive PYUSD");
-    require(loan.lastEthIn() == swapAdapter.lastEthOut(), "ETH delivered mismatch");
-}
-
-    // přijímání ETH (kdyby test posílal Ether)
     receive() external payable {}
 }

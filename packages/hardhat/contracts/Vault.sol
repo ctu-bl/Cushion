@@ -173,7 +173,7 @@ contract Vault is ERC4626, Ownable {
         uint256 debtValueUsd = ILoanWrapper(loan).getTotalDebtValue();
         if (collateralValueUsd == 0) revert Vault__InvalidLoanAddress();
         uint256 injectionAmountUsd = ((collateralValueUsd - debtValueUsd) * debtValueUsd) / collateralValueUsd / 2;
-
+        
         if (IERC20(asset()).balanceOf(address(this)) < injectionAmountUsd) revert Vault__InsufficientLiquidity();
 
     
@@ -181,9 +181,9 @@ contract Vault is ERC4626, Ownable {
         (, int256 pyusdPriceInt, , , ) = PYUSD_USD_FEED.latestRoundData();
         uint256 pyusdPrice = uint256(pyusdPriceInt); 
         // Převod USD na PYUSD
+
         uint256 injectionAmountPyUsd = (injectionAmountUsd * 1e18) / (pyusdPrice * 1e10);
 
-        
         // swap pyUSD -> Eth
         uint256 amountEthOut = _swapPyUsdToEth(injectionAmountPyUsd);
         
@@ -229,6 +229,14 @@ contract Vault is ERC4626, Ownable {
         
         uint256 withdrawalAmount = currentLoanValue(loan);
         totalInjectedAssets -= injected.amountPyUsd;
+        
+        // totalInjectedAssets drží ETH, takže odečti to, co jsme do půjčky poslali v ETH
+        if (totalInjectedAssets >= injected.amountEthSent) {
+            totalInjectedAssets -= injected.amountEthSent;
+        } else {
+            totalInjectedAssets = 0;
+        }
+
         delete injectedAssets[loan];
 
         ILoanWrapper(loan).decreaseCollateral(withdrawalAmount);
@@ -247,44 +255,41 @@ contract Vault is ERC4626, Ownable {
      * @dev Can be called by anyone when a loan's HF is below the liquidation threshold.
      */
     function liquidate(address loan) external {
+   
+        updateAccumulatedInterest();
 
+        InjectedCapital memory injected = injectedAssets[loan];
+        if (injected.amountPyUsd == 0) revert Vault__NoInjectedAssets();
 
-        
-        //emit LoanLiquidated(loan, profit);
-        
-        //      - This is what LLM has written me:
-        //
-        //    - This is the complex part   
-        //    - Initiate a flashloan for the debt asset.
-        //    - In the callback, liquidate the position via the LoanWrapper.
-        //    - Swap the received collateral back to the debt asset.
-        //    - Repay the flashloan.
-        //    - Ensure the operation was profitable.
+        uint256 collateralUsd = ILoanWrapper(loan).getTotalCollateralValue(); // 8 dec
+        if (collateralUsd == 0) revert Vault__InvalidLoanAddress();
+
+        (, int256 ethPriceInt,,,) = ETH_USD_FEED.latestRoundData(); // 8 dec
+        uint256 ethPrice = uint256(ethPriceInt);
+        require(ethPrice > 0, "bad ETH price");
+
+        // ETH (wei) = USD(8) / (ETH/USD 8) * 1e18
+        uint256 collateralEthWei = (collateralUsd * 1e18) / ethPrice;
+
+        uint256 pyusdBefore = IERC20(asset()).balanceOf(address(this));
+
+       
+        ILoanWrapper(loan).decreaseCollateral(collateralEthWei);
+
+        uint256 pyusdAfter = IERC20(asset()).balanceOf(address(this));
+        uint256 proceedsPyUsd = pyusdAfter > pyusdBefore ? pyusdAfter - pyusdBefore : 0;
+
+        if (totalInjectedAssets >= injected.amountEthSent) {
+            totalInjectedAssets -= injected.amountEthSent;
+        } else {
+            totalInjectedAssets = 0;
+        }
+        delete injectedAssets[loan];
+
+        emit LoanLiquidated(loan, proceedsPyUsd);
     }
-    /*
-    function _swapPyUsdToEth(uint256 amountIn)internal virtual returns (uint256) {
-        if (address(swapAdapter) != address(0)) {
-        // TEST/POC větev: adapter dělá “to samé zvenčí”
-        IERC20(asset()).approve(address(swapAdapter), amountIn);
-        uint256 ethOut = ISwapAdapter(swapAdapter).swapPyUsdToEth(asset(), amountIn);
-        return ethOut;
-    }
-        IERC20(asset()).approve(address(SWAP_ROUTER), amountIn);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn: PYUSD_TOKEN,
-            tokenOut: WETH_TOKEN,
-            fee: 3000,
-            recipient: address(this),
-            deadline: block.timestamp,
-            amountIn: amountIn,
-            amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
-        });
-        uint256 amountWethOut = SWAP_ROUTER.exactInputSingle(params);
-        if (amountWethOut == 0) revert Vault__SwapFailed();
-        IWETH(WETH_TOKEN).withdraw(amountWethOut);
-        return amountWethOut;
-    }*/
+
+    
 
     function _swapPyUsdToEth(uint256 amountIn) internal virtual returns (uint256) {
     // TEST/POC větev – používá mock adapter (deterministický kurz)
