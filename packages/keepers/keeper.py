@@ -1,19 +1,39 @@
 from web3 import Web3
+from dotenv import load_dotenv
 import json
 import time
+import threading
+import random
+import os
+
+# === Load environment variables ===
+load_dotenv()
 
 # === Connect to Anvil RPC ===
-w3 = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
+RPC_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")
+w3 = Web3(Web3.HTTPProvider(RPC_URL))
 assert w3.is_connected(), "Chain is not connected"
 print("Connect on chain:", w3.client_version)
 
-# === Conf ===
-CHAIN_ID = 31337  # anvil chain ID
-PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"      # anvil private key
+# === Conf  from .env ===
+CHAIN_ID = int(os.getenv("CHAIN_ID", "31337"))  # anvil chain ID
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")          # anvil private key
+assert PRIVATE_KEY, "Missing PRIVATE_KEY in .env file"
 ACCOUNT = w3.eth.account.from_key(PRIVATE_KEY)
-LoanWrapperRegistry_ADDRESS = w3.to_checksum_address("0x0000000000000000000000000000000000000000")
-Vault_ADDRESS = w3.to_checksum_address("0x0000000000000000000000000000000000000000")
+
+LoanWrapperRegistry_ADDRESS = w3.to_checksum_address(os.getenv("LoanWrapperRegistry_ADDRESS"))
+Vault_ADDRESS = w3.to_checksum_address(os.getenv("Vault_ADDRESS"))
+MockEthOracle_ADDRESS = w3.to_checksum_address(os.getenv("MockEthOracle_ADDRESS"))
 # LoanWrapper_ADDRESS = w3.to_checksum_address("0x0000000000000000000000000000000000000000")
+
+HF_INJECT_THRESHOLD = float(os.getenv("HF_INJECT_THRESHOLD", "1.15"))
+HF_LIQUIDATE_THRESHOLD = float(os.getenv("HF_LIQUIDATE_THRESHOLD", "1.4"))
+HF_WITHDRAW_THRESHOLD = float(os.getenv("HF_WITHDRAW_THRESHOLD", "2.5"))
+CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "10"))     # seconds
+
+MIN_PRICE = float(os.getenv("MIN_PRICE", "2000"))
+MAX_PRICE = float(os.getenv("MAX_PRICE", "4500"))
+VOLATILITY = float(os.getenv("VOLATILITY", "0.08"))     # ±8 % jump
 
 # === Contract ABI ===
 ABI_LoanWrapper = [
@@ -81,13 +101,80 @@ ABI_Vault = [
     },
 ]
 
+ABI_MockEthOracle = [
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            { "internalType": "address", "name": "", "type": "address" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [
+            { "internalType": "uint8", "name": "", "type": "uint8" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            { "internalType": "int256", "name": "_newPrice", "type": "int256" }
+        ],
+        "name": "setPrice",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getLatestPrice",
+        "outputs": [
+            { "internalType": "int256", "name": "", "type": "int256" },
+            { "internalType": "uint256", "name": "", "type": "uint256" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "latestAnswer",
+        "outputs": [
+            { "internalType": "int256", "name": "", "type": "int256" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "latestTimestamp",
+        "outputs": [
+            { "internalType": "uint256", "name": "", "type": "uint256" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            { "internalType": "address", "name": "_newOwner", "type": "address" }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+];
+
+
 vault_contract = w3.eth.contract(address=Vault_ADDRESS, abi=ABI_Vault)
 LoanWrapperRegistry_contract = w3.eth.contract(address=LoanWrapperRegistry_ADDRESS, abi=ABI_LoanWrapperRegistry)
-
+mockETHOracle_contract = w3.eth.contract(address=MockEthOracle_ADDRESS, abi=ABI_MockEthOracle)
 # loanWrapper_contract = w3.eth.contract(address=LoanWrapper_ADDRESS, abi=ABI_LoanWrapper)
 
 
-# === Pomocné funkce ===
 def send_tx(tx):
     """
     this method sent a transaction on chain
@@ -172,23 +259,53 @@ def get_hf(wrapper_address: str):
 
 
 def is_locked(LoanWrapper_address: str):
-    """
-    Check if the loan wrapper is locked
-    :return: True if locked, False otherwise
+    """Check if the specified LoanWrapper contract is locked.
+    :param LoanWrapper_address: Address of the LoanWrapper contract.
+    :return: True if locked, False otherwise.
     """
     loanWrapper_contract = w3.eth.contract(address=LoanWrapper_address, abi=ABI_LoanWrapper)
     locked = loanWrapper_contract.functions.isLocked().call()
     print(f"Loan wrapper locked: {locked}")
     return locked
 
+def set_price(newPrice: int):
+    """
+    Update the ETH price in the MockEthOracle contract on-chain
+    :param newPrice: New ETH price (integer value, e.g. 250000 for $2500.00)
+    :return: Transaction receipt after sending the transaction
+    """
+    nonce = w3.eth.get_transaction_count(ACCOUNT.address)
+    tx = mockETHOracle_contract.functions.setPrice(newPrice * (10 **6)).build_transaction({
+        "from": ACCOUNT.address,
+        "chainId": CHAIN_ID,
+        "gas": 150000,
+        "gasPrice": w3.eth.gas_price,
+        "nonce": nonce
+    })
+    return send_tx(tx)
 
+def get_latest_price():
+    """
+    Retrieve the latest ETH price from the MockEthOracle contract
+    :return: Current ETH price (int value from the smart contract)
+    """
+    price = mockETHOracle_contract.functions.latestAnswer().call()
+    return price
 
-HF_INJECT_THRESHOLD = 1.15
-HF_LIQUIDATE_TRESHOLD = 1.4
-HF_WITHDRAW_THRESHOLD = 2.5
-CHECK_INTERVAL = 10  # seconds
 
 def monitoring():
+    """
+    Monitor all active loan wrappers, evaluate their Health Factor (HF),
+    and take automated actions (inject, liquidate, withdraw) based on thresholds.
+
+    Logic:
+    - If HF < HF_INJECT_THRESHOLD → inject or liquidate depending on lock status
+    - If HF < HF_LIQUIDATE_THRESHOLD → liquidate if locked
+    - If HF < HF_WITHDRAW_THRESHOLD → no action
+    - If HF ≥ HF_WITHDRAW_THRESHOLD and loan is locked → withdraw from loan
+
+    This function runs continuously in a loop with CHECK_INTERVAL pauses.
+    """
     print("=== Loan Monitor started ===")
     while True:
         try:
@@ -209,17 +326,17 @@ def monitoring():
                         print(f"HF ({hf}) < {HF_INJECT_THRESHOLD} → inject_to_loan({wrapper})")
                         inject_to_loan(wrapper)
 
-                elif hf < HF_LIQUIDATE_TRESHOLD:
+                elif hf < HF_LIQUIDATE_THRESHOLD:
                     if locked:
-                        print(f"HF ({hf}) < {HF_LIQUIDATE_TRESHOLD} → liquidate({wrapper})")
+                        print(f"HF ({hf}) < {HF_LIQUIDATE_THRESHOLD} → liquidate({wrapper})")
                         liquidate(wrapper)
 
                 elif hf < HF_WITHDRAW_THRESHOLD:
-                    print(f"HF ({hf}) < {HF_WITHDRAW_THRESHOLD} → ({wrapper})")
+                    print(f"HF ({hf}) < {HF_WITHDRAW_THRESHOLD} → okej({wrapper})")
 
                 else:
                     if locked:
-                        print(f"HF ({hf}) < {HF_LIQUIDATE_TRESHOLD} → withdraw from loan({wrapper})")
+                        print(f"HF ({hf}) < {HF_LIQUIDATE_THRESHOLD} → withdraw from loan({wrapper})")
                         withdraw_from_loan(wrapper)
 
             print(f"Wait {CHECK_INTERVAL} seconds...\n")
@@ -231,5 +348,60 @@ def monitoring():
             time.sleep(CHECK_INTERVAL)
 
 
-if __name__ == "__main__":
+def simulate_price():
+    """
+    Continuously simulate ETH price changes and push them on-chain via set_price().
+    - Starts from a random price between MIN_PRICE and MAX_PRICE.
+    - Randomly changes the price by ±VOLATILITY percent.
+    - Keeps the price within [MIN_PRICE, MAX_PRICE] bounds.
+    - Sends each update to the blockchain using set_price().
+    - Waits a random 0.7–1.0 seconds between updates.
+    """
+    current_price = random.uniform(MIN_PRICE, MAX_PRICE)
+
+    while True:
+        change_pct = random.uniform(-VOLATILITY, VOLATILITY)
+        new_price = current_price * (1 + change_pct)
+        new_price = max(MIN_PRICE, min(MAX_PRICE, new_price))
+
+        try:
+            tx = set_price(int(new_price * 100))
+            print(f"New ETH price: {new_price:.2f} USD")
+        except Exception as e:
+            print(f"ERROR set_price failed: {e}")
+
+        current_price = new_price
+        time.sleep(random.uniform(0.7, 1))
+
+def start_simulate_with_mockETH():
+    """
+    Start both the price simulation and loan monitoring processes in separate threads.
+
+    - Thread 1: simulate_price() → updates ETH price on-chain periodically.
+    - Thread 2: monitoring() → observes loans and reacts to HF changes.
+
+    Runs until interrupted by user (Ctrl+C).
+    """
+    t1 = threading.Thread(target=simulate_price, daemon=True)
+    t2 = threading.Thread(target=monitoring, daemon=True)
+
+    t1.start()
+    t2.start()
+
+    print("=== Simulation and monitoring threads started ===")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n=== Stopping threads and exiting ===")
+
+def start_simulate_without_mockETH():
+    """
+    Start only monitoring process in separate threads.
+    This is for real run on blockchain without mock ETH.
+    """
     monitoring()
+
+if __name__ == "__main__":
+    start_simulate_with_mockETH()
+    # start_simulate_without_mockETH()

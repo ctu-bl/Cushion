@@ -92,6 +92,34 @@ async function main() {
   const registryAddress = registry.address;
   console.log("✅ LoanWrapperRegistry deployed to:", registryAddress);
 
+  // ========== Deploy MockEthOracle ==========
+  console.log("\n📈 Deploying MockEthOracle...");
+  const OracleArtifact = await hre.artifacts.readArtifact("MockEthOracle");
+  const OracleFactory = new ethersLib.ContractFactory(
+    OracleArtifact.abi,
+    OracleArtifact.bytecode,
+    deployer
+  );
+
+  const oracle = await OracleFactory.deploy(3000n * 10n ** 8n, 8);
+  await oracle.deployTransaction.wait();
+  const oracleAddress = oracle.address;
+  console.log("✅ MockEthOracle deployed to:", oracleAddress);
+
+  // ========== Deploy PriceConsumer linked to Oracle ==========
+  console.log("\n📊 Deploying PriceConsumer...");
+  const ConsumerArtifact = await hre.artifacts.readArtifact("PriceConsumer");
+  const ConsumerFactory = new ethersLib.ContractFactory(
+    ConsumerArtifact.abi,
+    ConsumerArtifact.bytecode,
+    deployer
+  );
+
+  const consumer = await ConsumerFactory.deploy(oracleAddress);
+  await consumer.deployTransaction.wait();
+  const consumerAddress = consumer.address;
+  console.log("✅ PriceConsumer deployed to:", consumerAddress);
+
   console.log("\n✨ Deployment completed!");
   console.log("\n📋 Deployed contracts:");
   console.log("  Vault:                  ", vaultAddress);
@@ -101,6 +129,8 @@ async function main() {
   console.log("  Mock WETH:              ", mockWETH.address);
   console.log("  Mock Pool:              ", mockPool.address);
   console.log("  Mock Provider:          ", mockProvider.address);
+  console.log("  Mock ETH price:         ", oracleAddress);
+  console.log("  PriceConsumer:          ", consumerAddress);
   console.log("\n💡 LoanWrapper contracts will be deployed dynamically when wrapping loans");
 
   // Generate deployedContracts.ts for frontend
@@ -109,6 +139,8 @@ async function main() {
     mockWETH: mockWETH.address,
     mockPool: mockPool.address,
     mockProvider: mockProvider.address,
+    oracleAddress: oracleAddress,
+    consumerAddress: consumerAddress,
   };
   await generateDeployedContracts(vaultAddress, registryAddress, mockAddresses);
 }
@@ -126,6 +158,8 @@ async function generateDeployedContracts(vaultAddress: string, registryAddress: 
   const MockAddressesProviderABI = (await hre.artifacts.readArtifact("MockAddressesProvider")).abi;
   const MockVariableDebtTokenABI = (await hre.artifacts.readArtifact("MockVariableDebtToken")).abi;
   const MockATokenABI = (await hre.artifacts.readArtifact("MockAToken")).abi;
+  const OracleABI = (await hre.artifacts.readArtifact("MockEthOracle")).abi;
+  const ConsumerABI = (await hre.artifacts.readArtifact("PriceConsumer")).abi;
   
   const chainId = "31337"; // Hardhat local chain ID as string
   
@@ -163,6 +197,15 @@ async function generateDeployedContracts(vaultAddress: string, registryAddress: 
         address: mockAddresses.aToken,
         abi: MockATokenABI,
       },
+      MockEthOracle: {
+        address: mockAddresses.oracleAddress,
+        abi: OracleABI,
+      },
+      PriceConsumer: {
+        address: mockAddresses.consumerAddress,
+        abi: ConsumerABI,
+      },
+
     },
   } as const;
   
