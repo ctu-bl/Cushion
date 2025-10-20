@@ -123,6 +123,13 @@ contract LoanWrapper is Ownable {
         _;
     }
 
+    modifier onlyOwnerOrVault() {
+        if (msg.sender != owner() && msg.sender != VAULT) {
+            revert LoanWrapper__AccessDenied();
+        }
+        _;
+    }
+
     modifier onlyOwnerOrInvestor() {
         if (msg.sender != owner() && msg.sender != s_investor) {
             revert LoanWrapper__AccessDenied();
@@ -199,27 +206,33 @@ contract LoanWrapper is Ownable {
         if ((amount > s_investorCollateral)  && msg.sender == s_investor) {
             revert LoanWrapper__InvalidAmount();
         }
-        int256 negativeCol = -int256(amount);
+        // Normalize collateral change into the same base as getUserAccountData returns.
+        // Pokud pool vrací hodnoty v 1e18 "USD" bázi, je potřeba použít cenový faktor.
+        // V mocku používáme fixní 1 WETH = 2000 USDC, tedy přepočet ~2000x.
+        int256 negativeCol = -int256(amount) * int256(2000);
         IPool pool = IPool(PROVIDER.getPool());
         (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
         if (computeHF(col, debt, lt, negativeCol, 0) < UNLOCKING_THRESHOLD) {
             revert LoanWrapper__BreaksHealthFactor();
         }
-        // --Effects--
+        // ---- Interactions (withdraw WETH from Aave pool to this wrapper) ----
+        uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR, amount, address(this));
+        if (withdrawn != amount) revert LoanWrapper__WithdrawFailed();
+
+        // ---- Effects (update local accounting) ----
         if (msg.sender == s_investor) {
-            IWETH9(COL_TOKEN_ADDR).withdraw(amount);
-            s_investorCollateral -= amount;
+            unchecked { s_investorCollateral -= amount; }
             s_investor = address(0);
             unlockWrapper();
         } else {
-            IWETH9(COL_TOKEN_ADDR).withdraw(amount);
-            s_initCollateral -= amount;
+            unchecked { s_initCollateral -= amount; }
         }
+
+        // ---- Interactions (unwrap and payout) ----
+        IWETH9(COL_TOKEN_ADDR).withdraw(amount);
         (bool success, ) = payable(msg.sender).call{value: amount}("");
-        if (!success) {
-            revert LoanWrapper__WithdrawFailed();
-        }
-        // --Interactions--
+        if (!success) revert LoanWrapper__WithdrawFailed();
+
         emit CollateralDecreased(address(this), msg.sender, amount);
     }
 
@@ -236,7 +249,8 @@ contract LoanWrapper is Ownable {
         if (amount <= 0) {
             revert LoanWrapper__InvalidAmount();
         }
-        int256 positiveAmount = int256(amount);
+        // Normalizace dluhu do stejné báze (USDC 1e6 -> 1e18 = *1e12)
+        int256 positiveAmount = int256(amount) * int256(1e12);
         IPool pool = IPool(PROVIDER.getPool());
         (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
         if (computeHF(col, debt, lt, 0, positiveAmount) < LOCKING_THRESHOLD) {
@@ -275,13 +289,10 @@ contract LoanWrapper is Ownable {
     }
     /// @notice This function can be called ONLY AND ONLY if there is sufficient balance
     // in the Vault to repay the loan
-    function repayLoan() external {
+    function repayLoan() external onlyOwnerOrVault {
         // --Checks--
         if (s_borrowedAmount <= 0) {
             revert LoanWrapper__NothingToRepay();
-        }
-        if (msg.sender != VAULT) {
-            revert LoanWrapper__AccessDenied();
         }
         // --Effects--
         IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), s_borrowedAmount);

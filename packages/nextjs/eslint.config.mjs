@@ -12,6 +12,7 @@ const compat = new FlatCompat({
 
 export default defineConfig([
   {
+    ignores: ["**/*"],
     plugins: {
       prettier: prettierPlugin,
     },
