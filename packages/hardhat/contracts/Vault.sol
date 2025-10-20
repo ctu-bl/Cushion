@@ -7,12 +7,22 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+
+interface ISwapAdapter {
+    function swapPyUsdToEth(address pyusd, uint256 amountPyUsd) external returns (uint256 ethOut);
+}
+
+
+
 interface ILoanWrapper {
     function getTotalCollateralValue() external view returns (uint256);
     function getTotalDebtValue() external view returns (uint256);
     function increaseCollateral(uint256 amount) external payable;
-    function decreaseCollateral(uint256 amount) external;
-}
+    function decreaseCollateral(uint256 amount) external payable;
+    function getOwnerCollateralValue() external view returns (uint256);
+    function getInvestorCollateralValue() external view returns (uint256);
+    function repayLoan() external;
+} 
 
 interface ISwapRouter {
     struct ExactInputSingleParams {
@@ -65,6 +75,8 @@ contract Vault is ERC4626, Ownable {
     error Vault__InvalidThresholds();
     error Vault__SwapFailed();
     // More errors maybe ???
+    error Vault__SwapAdapterNotSet();
+
 
     // ------------------CONSTANTS------------------
     address public constant PYUSD_TOKEN = 0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9; // PYUSD on Sepolia
@@ -163,17 +175,17 @@ contract Vault is ERC4626, Ownable {
         uint256 debtValueUsd = ILoanWrapper(loan).getTotalDebtValue();
         if (collateralValueUsd == 0) revert Vault__InvalidLoanAddress();
         uint256 injectionAmountUsd = ((collateralValueUsd - debtValueUsd) * debtValueUsd) / collateralValueUsd / 2;
-
+        
         if (IERC20(asset()).balanceOf(address(this)) < injectionAmountUsd) revert Vault__InsufficientLiquidity();
 
     
         // calculate Eth -> PyUsd
         (, int256 pyusdPriceInt, , , ) = PYUSD_USD_FEED.latestRoundData();
-        uint256 pyusdPrice = uint256(pyusdPriceInt); // Cena má 8 des. míst
+        uint256 pyusdPrice = uint256(pyusdPriceInt); 
+    
         // Převod USD na PYUSD
         uint256 injectionAmountPyUsd = (injectionAmountUsd * 1e18) / (pyusdPrice * 1e10);
 
-        
         // swap pyUSD -> Eth
         uint256 amountEthOut = _swapPyUsdToEth(injectionAmountPyUsd);
         
@@ -186,21 +198,9 @@ contract Vault is ERC4626, Ownable {
             amountEthSent: amountEthOut,
             initialAccumulatedInterest: accumulatedInterest
         });
-
     
-        totalInjectedAssets += amountEthOut;  
-
-        // --- Interakce (Odeslání pyUSD) ---
-        //asset().transfer(loan, injectionAmountEth);
-        //ILoanWrapper(loan).increaseCollateral{value: injectionAmountEth}();
-        
+        totalInjectedAssets += injectionAmountPyUsd;  
         emit CapitalInjected(loan, amountEthOut);
-
-
-        // 1. Checks:
-        //    - Update state: store the injection amount and current `accumulatedInterest`.
-        // 3. Interactions:
-        //    - Transfer the asset to the loan contract.
     }
 
     /**
@@ -215,17 +215,22 @@ contract Vault is ERC4626, Ownable {
         InjectedCapital memory injected = injectedAssets[loan];
         if (injected.amountPyUsd == 0) revert Vault__NoInjectedAssets();
         
-        uint256 withdrawalAmount = currentLoanValue(loan);
-        totalInjectedAssets -= injected.amountPyUsd;
-        delete injectedAssets[loan];
-
-        ILoanWrapper(loan).decreaseCollateral(withdrawalAmount);
+        uint256 amountToWithdraw = ILoanWrapper(loan).getInvestorCollateralValue() + interestRate;
         
-        emit CapitalWithdrawn(loan, withdrawalAmount);
+        totalInjectedAssets -= injected.amountPyUsd;
+        if (totalInjectedAssets >= injected.amountEthSent) {
+            totalInjectedAssets -= injected.amountEthSent;
+        } else {
+            totalInjectedAssets = 0;
+        }
+
+        delete injectedAssets[loan];
+        ILoanWrapper(loan).decreaseCollateral(amountToWithdraw);
+        
+        emit CapitalWithdrawn(loan, amountToWithdraw);
         // 2. Effects:
         //    - Calculate how much to withdraw (principal + interest).
         //    - Update `totalInjectedAssets`.
-        //    - Delete the entry from `injectedAssets`.
     
     }
 
@@ -235,44 +240,59 @@ contract Vault is ERC4626, Ownable {
      * @dev Can be called by anyone when a loan's HF is below the liquidation threshold.
      */
     function liquidate(address loan) external {
-        // 1. Checks:
-        //    - require(injectedAssets[loan].amount > 0, "NoInjectedAssets");
-        //    - Possible only when capital has been injected
-        //    - Get loan's Health Factor.
-        //    - require(HF < liquidationThreshold, "HealthFactorTooLow");
-        //
-        // 2. Interactions:
-        //    TODO: Ask how to actually implemnt this
-        //      - This is what LLM has written me:
-        //
-        //    - This is the complex part   
-        //    - Initiate a flashloan for the debt asset.
-        //    - In the callback, liquidate the position via the LoanWrapper.
-        //    - Swap the received collateral back to the debt asset.
-        //    - Repay the flashloan.
-        //    - Ensure the operation was profitable.
+
+        updateAccumulatedInterest();
+        InjectedCapital memory injected = injectedAssets[loan];
+        if (injected.amountPyUsd == 0) revert Vault__NoInjectedAssets();
+
+        uint256 amountToLiquidate = ILoanWrapper(loan).getTotalCollateralValue();
+        if (amountToLiquidate == 0) revert Vault__InvalidLoanAddress();
+
+        if (IERC20(asset()).balanceOf(address(this)) < amountToLiquidate) {
+            revert Vault__InsufficientLiquidity();
+        }
+
+        
+        IERC20(asset()).approve(loan, amountToLiquidate);
+        ILoanWrapper(loan).repayLoan();
+
+        if (totalInjectedAssets >= injected.amountEthSent) {
+        totalInjectedAssets -= injected.amountEthSent;
+        } else {
+            totalInjectedAssets = 0;
+        }
+        delete injectedAssets[loan];
+        
+
+        emit LoanLiquidated(loan, amountToLiquidate);
     }
 
-    function _swapPyUsdToEth(uint256 amountIn) private returns (uint256) {
-        IERC20(asset()).approve(address(SWAP_ROUTER), amountIn);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn: PYUSD_TOKEN,
-            tokenOut: WETH_TOKEN,
-            fee: 3000,
-            recipient: address(this),
-            deadline: block.timestamp,
-            amountIn: amountIn,
-            amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
-        });
-        uint256 amountWethOut = SWAP_ROUTER.exactInputSingle(params);
-        if (amountWethOut == 0) revert Vault__SwapFailed();
-        IWETH(WETH_TOKEN).withdraw(amountWethOut);
-        return amountWethOut;
+    
+
+    function _swapPyUsdToEth(uint256 amountIn) internal virtual returns (uint256) {
+
+    ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+        tokenIn: PYUSD_TOKEN,
+        tokenOut: WETH_TOKEN,
+        fee: 3000,
+        recipient: address(this),
+        deadline: block.timestamp,
+        amountIn: amountIn,
+        amountOutMinimum: 0,           // POC: 0; v produkci nastav slippage
+        sqrtPriceLimitX96: 0
+    });
+
+    uint256 amountWethOut = SWAP_ROUTER.exactInputSingle(params);
+    if (amountWethOut == 0) revert Vault__SwapFailed();
+
+    // převod WETH -> ETH pro increaseCollateral{value: ...}
+    IWETH(WETH_TOKEN).withdraw(amountWethOut);
+    return amountWethOut; // v wei (ETH)
     }
 
 
-    function _swapEthToPyUsd(uint256 amountIn) private returns (uint256) {
+
+    function _swapEthToPyUsd(uint256 amountIn) internal virtual returns (uint256) {
         IWETH(WETH_TOKEN).deposit{value: amountIn}();
         IWETH(WETH_TOKEN).approve(address(SWAP_ROUTER), amountIn);
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
@@ -343,7 +363,9 @@ contract Vault is ERC4626, Ownable {
             _swapEthToPyUsd(ethBalance);
         }
     }
+
     
+
     /**
      * Maybe more functions, will add it later
      */
