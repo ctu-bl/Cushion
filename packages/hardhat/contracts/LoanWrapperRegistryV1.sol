@@ -78,11 +78,16 @@ contract LoanWrapperRegistry {
         require(WETH!=address(0) && USDC!=address(0), LoanWrapperRegistry__AssetsNotSet());
         require(msg.value > 0, LoanWrapperRegistry__NoETHSent());
 
-        // 1) deploy wrapperu (pozice bude vedena na jeho adrese)
-        try new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, address(provider)) returns (LoanWrapper wrapper) {
-        wrapperOf[borrower] = address(wrapper);
-        allWrappers.push(address(wrapper));
-        emit LoanWrapped(borrower, address(wrapper), borrowedAmount, WETH);
+
+        address wrapper = wrapperOf[borrower];
+        if (wrapper == address(0)) {
+            LoanWrapper wrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, provider);
+            wrapperOf[borrower] = address(wrapper);
+            allWrappers.push(address(wrapper));
+        } else{
+            LoanWrapper(wrapper).setActive();
+        }
+        emit LoanWrapped(borrower, wrapper, borrowedAmount, WETH);
 
         IPool pool = IPool(provider.getPool());
 
@@ -97,10 +102,8 @@ contract LoanWrapperRegistry {
         //    Pozor: underlying USDC se po borrowu pošle volajícímu (registru),
         //    proto ho hned přepošleme borrowerovi.
         pool.borrow(USDC, borrowedAmount, 2, 0, address(wrapper)); // 2 = VARIABLE
+
         require(IERC20(USDC).transfer(borrower, borrowedAmount), LoanWrapperRegistry__TransferFailed());
-        } catch {
-            revert("LoanWrapper deployment failed");
-        }
     }
 
 

@@ -68,6 +68,11 @@ contract LoanWrapper is Ownable {
     /// @notice Simple boolean value for giving/taking control to/from the owner
     bool private locked = false;
 
+    /// @notice Is the wrapper currently active - has an ongoing loan
+    bool private isActive;
+
+    address private registryAddress;
+
     // ------------------EVENTS------------------
 
 
@@ -111,8 +116,9 @@ contract LoanWrapper is Ownable {
             DataTypes.ReserveData memory r = pool.getReserveData(DEBT_TOKEN_ADDR);
             IDelegationToken(r.variableDebtTokenAddress).approveDelegation(
             msg.sender,
-            amount
-        );
+            amount);
+            registryAddress = msg.sender;
+            isActive = true;
         }
 
     // ------------------MODIFIERS------------------
@@ -125,6 +131,13 @@ contract LoanWrapper is Ownable {
 
     modifier onlyOwnerOrVault() {
         if (msg.sender != owner() && msg.sender != VAULT) {
+            revert LoanWrapper__AccessDenied();
+        }
+        _;
+    }
+
+    modifier onlyRegistry() {
+        if (msg.sender != registryAddress) {
             revert LoanWrapper__AccessDenied();
         }
         _;
@@ -301,6 +314,7 @@ contract LoanWrapper is Ownable {
         pool.repay(DEBT_TOKEN_ADDR, type(uint256).max, 2, address(this));
         s_borrowedAmount = 0;
         // --Interactions--
+        isActive = false; //Loan is repaid, wrapper is inactive
         emit LoanRepaid(address(this));
     }
 
@@ -323,6 +337,14 @@ contract LoanWrapper is Ownable {
 
     function getInvestorCollateralValue() external view returns (uint256) {
         return s_investorCollateral;
+    }
+
+    function getIsActive() external view returns (bool) {
+        return isActive;
+    }
+
+    function setActive() external onlyRegistry {
+        isActive = true;
     }
 
     receive() external payable {}
