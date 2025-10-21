@@ -43,6 +43,7 @@ contract LoanWrapper is Ownable {
     error LoanWrapper__NothingToRepay();
     error LoanWrapper__NotAccesibleForInvestor();
     error LoanWrapper__WithdrawFailed();
+    error LoanWrapper__RepayFailed();
 
     // ------------------CONSTANTS------------------
     address private VAULT;
@@ -228,9 +229,6 @@ contract LoanWrapper is Ownable {
         if (computeHF(col, debt, lt, negativeCol, 0) < UNLOCKING_THRESHOLD) {
             revert LoanWrapper__BreaksHealthFactor();
         }
-        // ---- Interactions (withdraw WETH from Aave pool to this wrapper) ----
-        uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR, amount, address(this));
-        if (withdrawn != amount) revert LoanWrapper__WithdrawFailed();
 
         // ---- Effects (update local accounting) ----
         if (msg.sender == s_investor) {
@@ -240,6 +238,10 @@ contract LoanWrapper is Ownable {
         } else {
             unchecked { s_initCollateral -= amount; }
         }
+
+        // ---- Interactions (withdraw WETH from Aave pool to this wrapper) ----
+        uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR, amount, address(this));
+        if (withdrawn != amount) revert LoanWrapper__WithdrawFailed();
 
         // ---- Interactions (unwrap and payout) ----
         IWETH9(COL_TOKEN_ADDR).withdraw(amount);
@@ -270,10 +272,10 @@ contract LoanWrapper is Ownable {
             revert LoanWrapper__BreaksHealthFactor();
         }
         // --Effects--
-        
+        s_borrowedAmount += amount;
         pool.borrow(DEBT_TOKEN_ADDR, amount, 2, 0, address(this));
         IERC20(DEBT_TOKEN_ADDR).transfer(owner(), amount);
-        s_borrowedAmount += amount;
+        
         // --Interactions--
         emit DebtIncreased(address(this), s_borrowedAmount);
     }
@@ -293,10 +295,10 @@ contract LoanWrapper is Ownable {
         }
 
         // --Effects--
+        s_borrowedAmount -= amount;
         IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), amount);
         IPool pool = IPool(PROVIDER.getPool());
         pool.repay(DEBT_TOKEN_ADDR, amount, 2, address(this));
-        s_borrowedAmount -= amount;
         // --Interactions--
         emit DebtDecreased(address(this), s_borrowedAmount);
     }
@@ -304,6 +306,9 @@ contract LoanWrapper is Ownable {
     // in the Vault to repay the loan
     function repayLoan() external onlyOwnerOrVault {
         // --Checks--
+        if (msg.sender == owner() && locked) {
+            revert LoanWrapper__WrapperNotUnlocked();
+        }
         if (s_borrowedAmount <= 0) {
             revert LoanWrapper__NothingToRepay();
         }
@@ -312,7 +317,19 @@ contract LoanWrapper is Ownable {
         IPool pool = IPool(PROVIDER.getPool());
         // Hopefully type(uint256).max is correct. It was in repay() desc on AAVE
         pool.repay(DEBT_TOKEN_ADDR, type(uint256).max, 2, address(this));
+
+        // TODO fee processing
         s_borrowedAmount = 0;
+        uint256 coll = s_initCollateral + s_investorCollateral;
+        s_initCollateral = 0;
+        s_investorCollateral = 0;
+        uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR,
+            coll, address(this));
+        IWETH9(COL_TOKEN_ADDR).withdraw(withdrawn);
+        (bool success, ) = payable(msg.sender).call{value: withdrawn}("");
+        if (!success) {
+            revert LoanWrapper__RepayFailed();
+        }
         // --Interactions--
         isActive = false; //Loan is repaid, wrapper is inactive
         emit LoanRepaid(address(this));
