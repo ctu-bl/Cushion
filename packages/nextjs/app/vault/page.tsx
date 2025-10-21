@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 
 export default function VaultPage() {
   const { isConnected, address } = useAccount();
@@ -20,81 +21,55 @@ export default function VaultPage() {
 
   const interestRate = 15;
 
-  // PYUSD Token contract
-  const PYUSD_ADDRESS = "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9";
-  const VAULT_ADDRESS = "0x7C046A238e0197FF9691839d85f27cC6914A4fB8";
+  // Get deployed contract addresses
+  const { data: mockPYUSDInfo } = useDeployedContractInfo("MockPYUSD");
+  const { data: vaultInfo } = useDeployedContractInfo("Vault");
+  
+  const PYUSD_ADDRESS = mockPYUSDInfo?.address;
+  const VAULT_ADDRESS = vaultInfo?.address;
 
   const { writeContractAsync } = useWriteContract();
 
   // Read PYUSD balance
   const { data: pyusdBalance, refetch: refetchPyusdBalance } = useReadContract({
     address: PYUSD_ADDRESS,
-    abi: [
-      {
-        inputs: [{ name: "account", type: "address" }],
-        name: "balanceOf",
-        outputs: [{ name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: mockPYUSDInfo?.abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address,
+      enabled: !!address && !!PYUSD_ADDRESS,
     },
   });
 
   // Read Vault total assets
   const { data: vaultTotalAssets, refetch: refetchVaultTotalAssets } = useReadContract({
     address: VAULT_ADDRESS,
-    abi: [
-      {
-        inputs: [],
-        name: "totalAssets",
-        outputs: [{ name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: vaultInfo?.abi,
     functionName: "totalAssets",
+    query: {
+      enabled: !!VAULT_ADDRESS,
+    },
   });
 
   // Read user's Vault shares
   const { data: userVaultShares, refetch: refetchUserVaultShares } = useReadContract({
     address: VAULT_ADDRESS,
-    abi: [
-      {
-        inputs: [{ name: "account", type: "address" }],
-        name: "balanceOf",
-        outputs: [{ name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: vaultInfo?.abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address,
+      enabled: !!address && !!VAULT_ADDRESS,
     },
   });
 
   // Convert user's shares to assets
   const { data: userVaultAssets, refetch: refetchUserVaultAssets } = useReadContract({
     address: VAULT_ADDRESS,
-    abi: [
-      {
-        inputs: [{ name: "shares", type: "uint256" }],
-        name: "convertToAssets",
-        outputs: [{ name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: vaultInfo?.abi,
     functionName: "convertToAssets",
     args: userVaultShares ? [userVaultShares] : undefined,
     query: {
-      enabled: !!userVaultShares,
+      enabled: !!userVaultShares && !!VAULT_ADDRESS,
     },
   });
 
@@ -207,18 +182,7 @@ export default function VaultPage() {
       const amount = parseFloat(depositAmount) * 1000000; // Convert to 6 decimals
       const hash = await writeContractAsync({
         address: VAULT_ADDRESS,
-        abi: [
-          {
-            inputs: [
-              { name: "assets", type: "uint256" },
-              { name: "receiver", type: "address" },
-            ],
-            name: "deposit",
-            outputs: [{ name: "", type: "uint256" }],
-            stateMutability: "nonpayable",
-            type: "function",
-          },
-        ],
+        abi: vaultInfo?.abi,
         functionName: "deposit",
         args: [BigInt(amount), address!],
       });
@@ -237,19 +201,7 @@ export default function VaultPage() {
       const amount = parseFloat(withdrawAmount) * 1000000; // Convert to 6 decimals
       const hash = await writeContractAsync({
         address: VAULT_ADDRESS,
-        abi: [
-          {
-            inputs: [
-              { name: "assets", type: "uint256" },
-              { name: "receiver", type: "address" },
-              { name: "owner", type: "address" },
-            ],
-            name: "withdraw",
-            outputs: [{ name: "", type: "uint256" }],
-            stateMutability: "nonpayable",
-            type: "function",
-          },
-        ],
+        abi: vaultInfo?.abi,
         functionName: "withdraw",
         args: [BigInt(amount), address!, address!],
       });
@@ -268,18 +220,7 @@ export default function VaultPage() {
       const amount = parseFloat(approveAmount) * 1000000; // Convert to 6 decimals
       const hash = await writeContractAsync({
         address: PYUSD_ADDRESS,
-        abi: [
-          {
-            inputs: [
-              { name: "spender", type: "address" },
-              { name: "amount", type: "uint256" },
-            ],
-            name: "approve",
-            outputs: [{ name: "", type: "bool" }],
-            stateMutability: "nonpayable",
-            type: "function",
-          },
-        ],
+        abi: mockPYUSDInfo?.abi,
         functionName: "approve",
         args: [VAULT_ADDRESS, BigInt(amount)],
       });
@@ -291,6 +232,21 @@ export default function VaultPage() {
       setApproveError(error instanceof Error ? error.message : "Approve failed");
     }
   };
+
+  // Show loading if contracts are not loaded
+  if (!PYUSD_ADDRESS || !VAULT_ADDRESS) {
+    return (
+      <main className="min-h-screen bg-base-200 py-12 px-4 md:px-8">
+        <div className="container mx-auto">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold mb-4 text-base-content">Vault</h1>
+            <div className="loading loading-spinner loading-lg"></div>
+            <p className="text-lg text-base-content/70 mt-4">Loading contracts...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-base-200 py-12 px-4 md:px-8">

@@ -68,11 +68,9 @@ contract LoanWrapper is Ownable {
 
     /// @notice Simple boolean value for giving/taking control to/from the owner
     bool private locked = false;
-
-    /// @notice Is the wrapper currently active - has an ongoing loan
-    bool private isActive;
-
-    address private registryAddress;
+    
+    /// @notice Whether the wrapper is active
+    bool private isActive = false;
 
     // ------------------EVENTS------------------
 
@@ -117,9 +115,8 @@ contract LoanWrapper is Ownable {
             DataTypes.ReserveData memory r = pool.getReserveData(DEBT_TOKEN_ADDR);
             IDelegationToken(r.variableDebtTokenAddress).approveDelegation(
             msg.sender,
-            amount);
-            registryAddress = msg.sender;
-            isActive = true;
+            amount
+        );
         }
 
     // ------------------MODIFIERS------------------
@@ -137,13 +134,6 @@ contract LoanWrapper is Ownable {
         _;
     }
 
-    modifier onlyRegistry() {
-        if (msg.sender != registryAddress) {
-            revert LoanWrapper__AccessDenied();
-        }
-        _;
-    }
-
     modifier onlyOwnerOrInvestor() {
         if (msg.sender != owner() && msg.sender != s_investor) {
             revert LoanWrapper__AccessDenied();
@@ -154,10 +144,10 @@ contract LoanWrapper is Ownable {
     modifier allowOnThreshold() {
         IPool pool = IPool(PROVIDER.getPool());
         (, , , , , uint256 hf) = pool.getUserAccountData(address(this));
-        if (s_investor != address(0)) {
+        if (s_investor != address(0) && s_investor != msg.sender) {
             revert LoanWrapper__AccessDenied();
         }
-        if (msg.sender != owner() && hf > LOCKING_THRESHOLD) {
+        if (msg.sender != owner() && msg.sender != VAULT && hf > LOCKING_THRESHOLD) {
             revert LoanWrapper__NotAccesibleForInvestor();
         }
         _;
@@ -188,7 +178,7 @@ contract LoanWrapper is Ownable {
         IPool pool = IPool(PROVIDER.getPool());
         if (msg.sender != owner()) {
             s_investor = msg.sender;
-            s_investorCollateral = amount;
+            s_investorCollateral = amount * 1e9;
             lockWrapper();
         } else {
             s_initCollateral += amount;
@@ -232,11 +222,13 @@ contract LoanWrapper is Ownable {
 
         // ---- Effects (update local accounting) ----
         if (msg.sender == s_investor) {
-            unchecked { s_investorCollateral -= amount; }
+            // safe subtraction; validated above that amount <= s_investorCollateral
+            s_investorCollateral = s_investorCollateral - amount;
             s_investor = address(0);
             unlockWrapper();
         } else {
-            unchecked { s_initCollateral -= amount; }
+            // safe subtraction; validated above for owner path
+            s_initCollateral = s_initCollateral - amount;
         }
 
         // ---- Interactions (withdraw WETH from Aave pool to this wrapper) ----
@@ -250,6 +242,67 @@ contract LoanWrapper is Ownable {
 
         emit CollateralDecreased(address(this), msg.sender, amount);
     }
+
+    /**
+     * @notice Decreases collateral for Vault operations (withdraws specific amounts from both user and investor collateral)
+     * @param investorAmount Amount of investor collateral to withdraw
+     * @param userAmount Amount of user collateral to withdraw
+     * @dev Only callable by Vault
+     */
+    function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external onlyOwnerOrVault {
+        // --Checks--
+        
+        uint256 totalAmount = investorAmount + userAmount;
+        if (totalAmount <= 0) {
+            revert LoanWrapper__InvalidAmount();
+        }
+        
+        // Check if we have enough collateral
+        if (investorAmount > s_investorCollateral) {
+            revert LoanWrapper__InvalidAmount();
+        }
+        if (userAmount > s_initCollateral) {
+            revert LoanWrapper__InvalidAmount();
+        }
+        
+        // Check Health Factor
+       IPool pool = IPool(PROVIDER.getPool());
+
+
+        console.log("Loandwithdrawing from aaave");
+        
+        // ---- Interactions (withdraw WETH from Aave pool to this wrapper) ----
+        uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR, totalAmount, address(this));
+        if (withdrawn != totalAmount) revert LoanWrapper__WithdrawFailed();
+
+        // ---- Effects (update local accounting) ----
+        if (investorAmount > 0) {
+            // safe subtraction; validated above
+            s_investorCollateral = s_investorCollateral - investorAmount;
+            if (s_investorCollateral == 0) {
+                s_investor = address(0);
+                unlockWrapper();
+            }
+        }
+        if (userAmount > 0) {
+            // safe subtraction; validated above
+            s_initCollateral = s_initCollateral - userAmount;
+        }
+
+        // ---- Interactions (unwrap and payout) ----
+        console.log("LoanWrapper: withdrawing WETH amount:", totalAmount);
+        console.log("LoanWrapper: WETH balance before withdraw:", IERC20(COL_TOKEN_ADDR).balanceOf(address(this)));
+        IWETH9(COL_TOKEN_ADDR).withdraw(totalAmount);
+        console.log("LoanWrapper: WETH withdrawn, sending ETH to:", msg.sender);
+        console.log("LoanWrapper: ETH balance before send:", address(this).balance);
+        (bool success, ) = payable(msg.sender).call{value: totalAmount}("");
+        console.log("LoanWrapper: ETH send success:", success);
+        console.log("LoanWrapper: ETH balance after send:", address(this).balance);
+        if (!success) revert LoanWrapper__WithdrawFailed();
+
+        emit CollateralDecreased(address(this), msg.sender, totalAmount);
+    }
+
 
     /**
      * @notice Increases the debt of the owner. HF should decrease and shouldn't
@@ -356,14 +409,6 @@ contract LoanWrapper is Ownable {
         return s_investorCollateral;
     }
 
-    function getIsActive() external view returns (bool) {
-        return isActive;
-    }
-
-    function setActive() external onlyRegistry {
-        isActive = true;
-    }
-
     receive() external payable {}
 
     // ------------------PRIVATE AND INTERNAL FUNCTIONS------------------
@@ -414,5 +459,19 @@ contract LoanWrapper is Ownable {
         int256 debtChange
     ) public pure returns (uint256) {
         return computeHF(totalCollateralBase, totalDebtBase, currentLiquidationThreshold, collateralChange, debtChange);
+    }
+
+    function setActive() external onlyOwnerOrVault {
+        isActive = true;
+    }
+
+    /**
+     * @notice Calculates current Health Factor for this wrapper using pool data.
+     * @dev Uses the same formula as computeHF with zero pending deltas.
+     */
+    function calculatedHF() external view returns (uint256) {
+        IPool pool = IPool(PROVIDER.getPool());
+        (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
+        return computeHF(col, debt, lt, 0, 0);
     }
 }

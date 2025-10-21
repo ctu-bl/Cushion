@@ -22,6 +22,7 @@ export default function SimulationPage() {
 
   // Load deployed mock addresses dynamically
   const { data: mockUSDCInfo } = useDeployedContractInfo("MockUSDC");
+  const { data: mockPYUSDInfo } = useDeployedContractInfo("MockPYUSD");
   const { data: mockWETHInfo } = useDeployedContractInfo("MockWETH");
   const { data: mockPoolInfo } = useDeployedContractInfo("MockPool");
 
@@ -39,6 +40,12 @@ export default function SimulationPage() {
   // User balances
   const { data: mockUSDCBalance } = useScaffoldReadContract({
     contractName: "MockUSDC",
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+  });
+
+  const { data: mockPYUSDBalance } = useScaffoldReadContract({
+    contractName: "MockPYUSD",
     functionName: "balanceOf",
     args: address ? [address] : undefined,
   });
@@ -178,6 +185,10 @@ export default function SimulationPage() {
 
   const { writeContractAsync: writeMockUSDC } = useScaffoldWriteContract({
     contractName: "MockUSDC",
+  });
+
+  const { writeContractAsync: writeMockPYUSD } = useScaffoldWriteContract({
+    contractName: "MockPYUSD",
   });
 
   const { writeContractAsync: writeMockWETH } = useScaffoldWriteContract({
@@ -336,6 +347,17 @@ export default function SimulationPage() {
       });
     } catch (error) {
       console.error("Error minting USDC:", error);
+    }
+  };
+
+  const handleMintPYUSD = async () => {
+    try {
+      await writeMockPYUSD({
+        functionName: "mint",
+        args: [address, BigInt(1000000 * 1e6)], // 1M PYUSD
+      });
+    } catch (error) {
+      console.error("Error minting PYUSD:", error);
     }
   };
 
@@ -742,7 +764,7 @@ export default function SimulationPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
         <div className="flex flex-col gap-6">
         <SectionCard title="Account Info" className="h-full">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <StatBox label="Address">
               <Address address={address} />
             </StatBox>
@@ -751,6 +773,9 @@ export default function SimulationPage() {
             </StatBox>
             <StatBox label="Mock USDC Balance">
               {mockUSDCBalance ? (Number(mockUSDCBalance) / 1e6).toFixed(2) : "0"} USDC
+            </StatBox>
+            <StatBox label="Mock PYUSD Balance">
+              {mockPYUSDBalance ? (Number(mockPYUSDBalance) / 1e6).toFixed(2) : "0"} PYUSD
             </StatBox>
             <StatBox label="Mock WETH Balance">
               {mockWETHBalance ? (Number(mockWETHBalance) / 1e18).toFixed(4) : "0"} WETH
@@ -833,9 +858,12 @@ export default function SimulationPage() {
         </SectionCard>
         {/* Mock Controls under Mock assets */}
         <SectionCard title="Mock Controls" className="">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <button className="btn btn-primary w-full" onClick={handleMintUSDC}>
               Mint 1M USDC
+            </button>
+            <button className="btn btn-secondary w-full" onClick={handleMintPYUSD}>
+              Mint 1M PYUSD
             </button>
             <button className="btn btn-primary w-full" onClick={handleMintWETH}>
               Convert ETH to WETH
@@ -846,6 +874,7 @@ export default function SimulationPage() {
           </div>
           <div className="mt-4 text-sm text-white">
             <p>• Mint USDC: Creates 1,000,000 USDC tokens in your account</p>
+            <p>• Mint PYUSD: Creates 1,000,000 PYUSD tokens in your account</p>
             <p>• Convert ETH: Wraps your ETH into WETH tokens</p>
             <p>• Deposit to Pool: Adds 500,000 USDC to the mock Aave pool for borrowing</p>
           </div>

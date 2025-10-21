@@ -6,6 +6,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import "hardhat/console.sol";
 
 
 interface ISwapAdapter {
@@ -78,12 +79,20 @@ contract Vault is ERC4626, Ownable {
     error Vault__SwapAdapterNotSet();
 
 
+
+        //address public constant PYUSD_TOKEN = 0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9;
+    //address public immutable PYUSD_TOKEN; // PYUSD token address
+    //address public constant WETH_TOKEN = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH na Sepolia
+    //ISwapRouter public constant SWAP_ROUTER = ISwapRouter(0x3bFA4769Fb09E13F390230Aad1E1645803B2a936); // Uniswap V3 Router na Sepolia
+    //IChainlinkAggregator public constant ETH_USD_FEED = IChainlinkAggregator(0x694AA1769357215DE4FAC081bf1f309aDC325306); // Chainlink ETH/USD on Sepolia
+    //IChainlinkAggregator public constant PYUSD_USD_FEED = IChainlinkAggregator(0x2306915A27A3a236592274A4589942A49B49742C); 
     // ------------------CONSTANTS------------------
-    address public constant PYUSD_TOKEN = 0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9; // PYUSD on Sepolia
-    address public constant WETH_TOKEN = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH na Sepolia
-    ISwapRouter public constant SWAP_ROUTER = ISwapRouter(0x3bFA4769Fb09E13F390230Aad1E1645803B2a936); // Uniswap V3 Router na Sepolia
-    IChainlinkAggregator public constant ETH_USD_FEED = IChainlinkAggregator(0x694AA1769357215DE4FAC081bf1f309aDC325306); // Chainlink ETH/USD on Sepolia
-    IChainlinkAggregator public constant PYUSD_USD_FEED = IChainlinkAggregator(0x2306915A27A3a236592274A4589942A49B49742C); // Chainlink PYUSD/USD on Sepolia
+    address public immutable PYUSD_TOKEN; 
+    // PYUSD token address
+    address public immutable WETH_TOKEN; // WETH token address
+    ISwapRouter public immutable SWAP_ROUTER; // Uniswap V3 Router
+    IChainlinkAggregator public immutable ETH_USD_FEED; // Chainlink ETH/USD
+    IChainlinkAggregator public immutable PYUSD_USD_FEED; // Chainlink PYUSD/USD
 
     /// @notice The annual interest rate charged on injected capital (1e18 precision).
     uint256 public interestRate = 5* 1e16; // TODO: Decide to interestRate if we have decided to be 5% it should be 5 * 1e16 I think;
@@ -151,11 +160,26 @@ contract Vault is ERC4626, Ownable {
      * @notice Initializes the Vault for a specific asset (pyUSD).
      * @param _name Name for the vault's ERC4626 share token.
      * @param _symbol Symbol for the vault's ERC20 share token.
+     * @param _pyusdToken Address of the PYUSD token.
+     * @param _wethToken Address of the WETH token.
+     * @param _swapRouter Address of the Uniswap router.
+     * @param _ethUsdFeed Address of the ETH/USD price feed.
+     * @param _pyusdUsdFeed Address of the PYUSD/USD price feed.
      */
     constructor(
         string memory _name,
-        string memory _symbol
-    ) ERC4626(ERC20(PYUSD_TOKEN)) ERC20(_name, _symbol) Ownable(msg.sender) {
+        string memory _symbol,
+        address _pyusdToken,
+        address _wethToken,
+        address _swapRouter,
+        address _ethUsdFeed,
+        address _pyusdUsdFeed
+    ) ERC4626(ERC20(_pyusdToken)) ERC20(_name, _symbol) Ownable(msg.sender) {
+        PYUSD_TOKEN = _pyusdToken;
+        WETH_TOKEN = _wethToken;
+        SWAP_ROUTER = ISwapRouter(_swapRouter);
+        ETH_USD_FEED = IChainlinkAggregator(_ethUsdFeed);
+        PYUSD_USD_FEED = IChainlinkAggregator(_pyusdUsdFeed);
         accumulatedInterest = 1e18; // Start with an index of 1.0
         lastInterestUpdate = block.timestamp;
     }
@@ -173,8 +197,11 @@ contract Vault is ERC4626, Ownable {
 
         uint256 collateralValueUsd = ILoanWrapper(loan).getTotalCollateralValue();
         uint256 debtValueUsd = ILoanWrapper(loan).getTotalDebtValue();
+        console.log("Vault: collateralValueUsd:", collateralValueUsd);
+        console.log("Vault: debtValueUsd:", debtValueUsd);
         if (collateralValueUsd == 0) revert Vault__InvalidLoanAddress();
-        uint256 injectionAmountUsd = ((collateralValueUsd - debtValueUsd) * debtValueUsd) / collateralValueUsd / 2;
+        uint256 injectionAmountUsd = (collateralValueUsd - debtValueUsd) * debtValueUsd / collateralValueUsd / 2;
+        console.log("Vault: injectionAmountUsd:", injectionAmountUsd);
         
         if (IERC20(asset()).balanceOf(address(this)) < injectionAmountUsd) revert Vault__InsufficientLiquidity();
 
@@ -182,9 +209,11 @@ contract Vault is ERC4626, Ownable {
         // calculate Eth -> PyUsd
         (, int256 pyusdPriceInt, , , ) = PYUSD_USD_FEED.latestRoundData();
         uint256 pyusdPrice = uint256(pyusdPriceInt); 
+        console.log("Vault: pyusdPrice:", pyusdPrice);
     
         // Převod USD na PYUSD
         uint256 injectionAmountPyUsd = (injectionAmountUsd * 1e18) / (pyusdPrice * 1e10);
+        console.log("Vault: injectionAmountPyUsd:", injectionAmountPyUsd);
 
         // swap pyUSD -> Eth
         uint256 amountEthOut = _swapPyUsdToEth(injectionAmountPyUsd);
@@ -199,7 +228,10 @@ contract Vault is ERC4626, Ownable {
             initialAccumulatedInterest: accumulatedInterest
         });
     
-        totalInjectedAssets += injectionAmountPyUsd;  
+        totalInjectedAssets += injectionAmountPyUsd;
+
+        //_burn(address(this), injectionAmountPyUsd);
+
         emit CapitalInjected(loan, amountEthOut);
     }
 
@@ -270,31 +302,56 @@ contract Vault is ERC4626, Ownable {
     
 
     function _swapPyUsdToEth(uint256 amountIn) internal virtual returns (uint256) {
+        console.log("Vault: _swapPyUsdToEth called with amountIn:", amountIn);
+        console.log("Vault: PYUSD_TOKEN:", PYUSD_TOKEN);
+        console.log("Vault: WETH_TOKEN:", WETH_TOKEN);
+        console.log("Vault: SWAP_ROUTER:", address(SWAP_ROUTER));
+        console.log("Vault: contract ETH balance before swap:", address(this).balance);
+        
+        // Approve PYUSD tokens for the swap router
+        console.log("Vault: approving PYUSD tokens for swap router");
+        IERC20(PYUSD_TOKEN).approve(address(SWAP_ROUTER), amountIn);
+        console.log("Vault: PYUSD approval completed");
 
-    ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-        tokenIn: PYUSD_TOKEN,
-        tokenOut: WETH_TOKEN,
-        fee: 3000,
-        recipient: address(this),
-        deadline: block.timestamp,
-        amountIn: amountIn,
-        amountOutMinimum: 0,           // POC: 0; v produkci nastav slippage
-        sqrtPriceLimitX96: 0
-    });
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: PYUSD_TOKEN,
+            tokenOut: WETH_TOKEN,
+            fee: 3000,
+            recipient: address(this),
+            deadline: block.timestamp,
+            amountIn: amountIn,
+            amountOutMinimum: 0,           // POC: 0; v produkci nastav slippage
+            sqrtPriceLimitX96: 0
+        });
 
-    uint256 amountWethOut = SWAP_ROUTER.exactInputSingle(params);
-    if (amountWethOut == 0) revert Vault__SwapFailed();
+        console.log("Vault: calling SWAP_ROUTER.exactInputSingle");
+        uint256 amountWethOut = SWAP_ROUTER.exactInputSingle(params);
+        console.log("Vault: exactInputSingle returned amountWethOut:", amountWethOut);
+        
+        if (amountWethOut == 0) revert Vault__SwapFailed();
 
-    // převod WETH -> ETH pro increaseCollateral{value: ...}
-    IWETH(WETH_TOKEN).withdraw(amountWethOut);
-    return amountWethOut; // v wei (ETH)
+        // převod WETH -> ETH pro increaseCollateral{value: ...}
+        console.log("Vault: calling WETH withdraw with amount:", amountWethOut);
+        console.log("Vault: WETH balance before withdraw:", IERC20(WETH_TOKEN).balanceOf(address(this)));
+        IWETH(WETH_TOKEN).withdraw(amountWethOut);
+        console.log("Vault: WETH withdraw completed");
+        console.log("Vault: contract ETH balance after withdraw:", address(this).balance);
+        
+        return amountWethOut; // v wei (ETH)
     }
 
 
 
     function _swapEthToPyUsd(uint256 amountIn) internal virtual returns (uint256) {
+        console.log("Vault: _swapEthToPyUsd called with amountIn:", amountIn);
+        console.log("Vault: depositing ETH to WETH");
         IWETH(WETH_TOKEN).deposit{value: amountIn}();
+        console.log("Vault: WETH deposit completed");
+        
+        console.log("Vault: approving WETH for swap router");
         IWETH(WETH_TOKEN).approve(address(SWAP_ROUTER), amountIn);
+        console.log("Vault: WETH approval completed");
+        
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: WETH_TOKEN,
             tokenOut: PYUSD_TOKEN,
@@ -305,7 +362,11 @@ contract Vault is ERC4626, Ownable {
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         });
+        
+        console.log("Vault: calling SWAP_ROUTER.exactInputSingle for ETH->PYUSD");
         uint256 amountPyUsdOut = SWAP_ROUTER.exactInputSingle(params);
+        console.log("Vault: exactInputSingle returned amountPyUsdOut:", amountPyUsdOut);
+        
         if (amountPyUsdOut == 0) revert Vault__SwapFailed();
         return amountPyUsdOut;
     }
@@ -358,10 +419,10 @@ contract Vault is ERC4626, Ownable {
     }
 
     receive() external payable {
-        uint256 ethBalance = address(this).balance;
-        if (ethBalance > 0) {
-            _swapEthToPyUsd(ethBalance);
-        }
+        console.log("Vault: received ETH:", msg.value);
+        console.log("Vault: total ETH balance now:", address(this).balance);
+        // Don't automatically convert ETH to PYUSD - keep it for collateral operations
+        // ETH will be used for increaseCollateral{value: ...} calls
     }
 
     

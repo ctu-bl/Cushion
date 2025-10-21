@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
-      "address": "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1",
+      "address": "0xAe2563b4315469bF6bdD41A6ea26157dE57Ed94e",
       "abi": [
         {
           "inputs": [
@@ -20,6 +20,31 @@ const deployedContracts = {
               "internalType": "string",
               "name": "_symbol",
               "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "_pyusdToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_wethToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_swapRouter",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_ethUsdFeed",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_pyusdUsdFeed",
+              "type": "address"
             }
           ],
           "stateMutability": "nonpayable",
@@ -1357,7 +1382,7 @@ const deployedContracts = {
       ]
     },
     "LoanWrapperRegistry": {
-      "address": "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44",
+      "address": "0x85495222Fd7069B987Ca38C2142732EbBFb7175D",
       "abi": [
         {
           "inputs": [
@@ -1645,7 +1670,270 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
-      "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+      "address": "0xa195ACcEB1945163160CD5703Ed43E4f78176a54",
+      "abi": [
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "name": "Approval",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "name": "Transfer",
+          "type": "event"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "allowance",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "spender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "approve",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "approveDelegation",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "balanceOf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "decimals",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "mint",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "name",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "symbol",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "totalSupply",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "pure",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "transfer",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "transferFrom",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ]
+    },
+    "MockPYUSD": {
+      "address": "0x6212cb549De37c25071cF506aB7E115D140D9e42",
       "abi": [
         {
           "anonymous": false,
@@ -1908,13 +2196,8 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
-      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
+      "address": "0x6F9679BdF5F180a139d01c598839a5df4860431b",
       "abi": [
-        {
-          "inputs": [],
-          "name": "LoanWrapper__InsufficientAllowance",
-          "type": "error"
-        },
         {
           "stateMutability": "payable",
           "type": "fallback"
@@ -1987,10 +2270,99 @@ const deployedContracts = {
           "type": "function"
         },
         {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "balanceOf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "decimals",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [],
           "name": "deposit",
           "outputs": [],
           "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "mint",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "name",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "symbol",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "totalSupply",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
           "type": "function"
         },
         {
@@ -2066,7 +2438,7 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
-      "address": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+      "address": "0x0bF7dE8d71820840063D4B8653Fd3F0618986faF",
       "abi": [
         {
           "inputs": [
@@ -4030,7 +4402,7 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
-      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+      "address": "0xc981ec845488b8479539e6B22dc808Fb824dB00a",
       "abi": [
         {
           "inputs": [
@@ -4654,7 +5026,7 @@ const deployedContracts = {
       ]
     },
     "MockEthOracle": {
-      "address": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
+      "address": "0x3abBB0D6ad848d64c8956edC9Bf6f18aC22E1485",
       "abi": [
         {
           "inputs": [
@@ -4796,7 +5168,7 @@ const deployedContracts = {
       ]
     },
     "PriceConsumer": {
-      "address": "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
+      "address": "0x021DBfF4A864Aa25c51F0ad2Cd73266Fde66199d",
       "abi": [
         {
           "inputs": [
