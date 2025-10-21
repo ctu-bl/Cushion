@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
-      "address": "0x12Bcb546bC60fF39F1Adfc7cE4605d5Bd6a6A876",
+      "address": "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1",
       "abi": [
         {
           "inputs": [
@@ -298,6 +298,11 @@ const deployedContracts = {
         {
           "inputs": [],
           "name": "Vault__NoInjectedAssets",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "Vault__SwapAdapterNotSet",
           "type": "error"
         },
         {
@@ -1352,7 +1357,7 @@ const deployedContracts = {
       ]
     },
     "LoanWrapperRegistry": {
-      "address": "0xaC47e91215fb80462139756f43438402998E4A3a",
+      "address": "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44",
       "abi": [
         {
           "inputs": [
@@ -1640,7 +1645,7 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
-      "address": "0x413b1AfCa96a3df5A686d8BFBF93d30688a7f7D9",
+      "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
       "abi": [
         {
           "anonymous": false,
@@ -1903,7 +1908,7 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
-      "address": "0x02df3a3F960393F5B349E40A599FEda91a7cc1A7",
+      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
       "abi": [
         {
           "inputs": [],
@@ -2061,7 +2066,7 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
-      "address": "0x821f3361D454cc98b7555221A06Be563a7E2E0A6",
+      "address": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
       "abi": [
         {
           "inputs": [
@@ -4025,7 +4030,7 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
-      "address": "0x1780bCf4103D3F501463AD3414c7f4b654bb7aFd",
+      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
       "abi": [
         {
           "inputs": [
@@ -4641,6 +4646,208 @@ const deployedContracts = {
               "internalType": "contract IERC20Like",
               "name": "",
               "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ]
+    },
+    "MockEthOracle": {
+      "address": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "int256",
+              "name": "_initialPrice",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint8",
+              "name": "_decimals",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "int256",
+              "name": "newPrice",
+              "type": "int256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "who",
+              "type": "address"
+            }
+          ],
+          "name": "PriceUpdated",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "decimals",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getLatestPrice",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "latestAnswer",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "latestTimestamp",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "owner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "int256",
+              "name": "_newPrice",
+              "type": "int256"
+            }
+          ],
+          "name": "setPrice",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "transferOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ]
+    },
+    "PriceConsumer": {
+      "address": "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_oracle",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "oracle",
+          "outputs": [
+            {
+              "internalType": "contract MockEthOracle",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "readPrice",
+          "outputs": [
+            {
+              "internalType": "int256",
+              "name": "",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "readPriceAsUint",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
             }
           ],
           "stateMutability": "view",
