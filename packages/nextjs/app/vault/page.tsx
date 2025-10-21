@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+<<<<<<< HEAD
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+=======
+import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+>>>>>>> 47ac52f (fixed injection)
 
 export default function VaultPage() {
   const { isConnected, address } = useAccount();
@@ -32,6 +37,7 @@ export default function VaultPage() {
   const { writeContractAsync: writePyusdContractAsync } = useScaffoldWriteContract("MockPYUSD");
 
   // Read PYUSD balance
+<<<<<<< HEAD
   const { data: pyusdBalance, refetch: refetchPyusdBalance } = useScaffoldReadContract({
     contractName: "MockPYUSD",
     functionName: "balanceOf",
@@ -41,10 +47,30 @@ export default function VaultPage() {
   // Read Vault total assets
   const { data: vaultTotalAssets, refetch: refetchVaultTotalAssets } = useScaffoldReadContract({
     contractName: "Vault",
+=======
+  const { data: pyusdBalance, refetch: refetchPyusdBalance } = useReadContract({
+    address: PYUSD_ADDRESS,
+    abi: mockPYUSDInfo?.abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!PYUSD_ADDRESS,
+    },
+  });
+
+  // Read Vault total assets
+  const { data: vaultTotalAssets, refetch: refetchVaultTotalAssets } = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: vaultInfo?.abi,
+>>>>>>> 47ac52f (fixed injection)
     functionName: "totalAssets",
+    query: {
+      enabled: !!VAULT_ADDRESS,
+    },
   });
 
   // Read user's Vault shares
+<<<<<<< HEAD
   const { data: userVaultShares, refetch: refetchUserVaultShares } = useScaffoldReadContract({
     contractName: "Vault",
     functionName: "balanceOf",
@@ -56,6 +82,27 @@ export default function VaultPage() {
     contractName: "Vault",
     functionName: "convertToAssets",
     args: userVaultShares ? [userVaultShares] : undefined,
+=======
+  const { data: userVaultShares, refetch: refetchUserVaultShares } = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: vaultInfo?.abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!VAULT_ADDRESS,
+    },
+  });
+
+  // Convert user's shares to assets
+  const { data: userVaultAssets, refetch: refetchUserVaultAssets } = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: vaultInfo?.abi,
+    functionName: "convertToAssets",
+    args: userVaultShares ? [userVaultShares] : undefined,
+    query: {
+      enabled: !!userVaultShares && !!VAULT_ADDRESS,
+    },
+>>>>>>> 47ac52f (fixed injection)
   });
 
   // Format PYUSD balance (6 decimals)
@@ -173,7 +220,13 @@ export default function VaultPage() {
       setDepositError(undefined);
       const amount = parseFloat(depositAmount) * 1000000; // Convert to 6 decimals
       const hash = await writeContractAsync({
+<<<<<<< HEAD
         functionName: "depositFor",
+=======
+        address: VAULT_ADDRESS,
+        abi: vaultInfo?.abi,
+        functionName: "deposit",
+>>>>>>> 47ac52f (fixed injection)
         args: [BigInt(amount), address!],
       });
       setDepositTxHash(hash);
@@ -192,8 +245,15 @@ export default function VaultPage() {
       
       // Use withdrawAmount function from Vault contract
       const hash = await writeContractAsync({
+<<<<<<< HEAD
         functionName: "withdrawAmount",
         args: [BigInt(amount), address!],
+=======
+        address: VAULT_ADDRESS,
+        abi: vaultInfo?.abi,
+        functionName: "withdraw",
+        args: [BigInt(amount), address!, address!],
+>>>>>>> 47ac52f (fixed injection)
       });
       setWithdrawTxHash(hash);
     setShowWithdrawModal(false);
@@ -208,7 +268,13 @@ export default function VaultPage() {
     try {
       setApproveError(undefined);
       const amount = parseFloat(approveAmount) * 1000000; // Convert to 6 decimals
+<<<<<<< HEAD
       const hash = await writePyusdContractAsync({
+=======
+      const hash = await writeContractAsync({
+        address: PYUSD_ADDRESS,
+        abi: mockPYUSDInfo?.abi,
+>>>>>>> 47ac52f (fixed injection)
         functionName: "approve",
         args: [VAULT_ADDRESS, BigInt(amount)],
       });

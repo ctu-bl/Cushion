@@ -178,7 +178,7 @@ contract LoanWrapper is Ownable {
         IPool pool = IPool(PROVIDER.getPool());
         if (msg.sender != owner()) {
             s_investor = msg.sender;
-            s_investorCollateral = amount;
+            s_investorCollateral = amount * 1e9;
             lockWrapper();
         } else {
             s_initCollateral += amount;
@@ -384,6 +384,7 @@ contract LoanWrapper is Ownable {
         }
         // --Interactions--
         isActive = false; //Loan is repaid, wrapper is inactive
+        // --Interactions--      ✖ yarn next:lint --fix --file app/simulation/page.tsx --file contracts/deployedContracts.ts [FAIL…
         emit LoanRepaid(address(this));
     }
 
@@ -458,19 +459,5 @@ contract LoanWrapper is Ownable {
         int256 debtChange
     ) public pure returns (uint256) {
         return computeHF(totalCollateralBase, totalDebtBase, currentLiquidationThreshold, collateralChange, debtChange);
-    }
-
-    function setActive() external onlyOwnerOrVault {
-        isActive = true;
-    }
-
-    /**
-     * @notice Calculates current Health Factor for this wrapper using pool data.
-     * @dev Uses the same formula as computeHF with zero pending deltas.
-     */
-    function calculatedHF() external view returns (uint256) {
-        IPool pool = IPool(PROVIDER.getPool());
-        (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
-        return computeHF(col, debt, lt, 0, 0);
     }
 }

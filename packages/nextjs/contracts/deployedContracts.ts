@@ -7,7 +7,11 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
+<<<<<<< HEAD
       "address": "0x0c03eCB91Cb50835e560a7D52190EB1a5ffba797",
+=======
+      "address": "0xAe2563b4315469bF6bdD41A6ea26157dE57Ed94e",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "inputs": [
@@ -1566,7 +1570,11 @@ const deployedContracts = {
       ]
     },
     "LoanWrapperRegistry": {
+<<<<<<< HEAD
       "address": "0xb04CB6c52E73CF3e2753776030CE85a36549c9C2",
+=======
+      "address": "0x85495222Fd7069B987Ca38C2142732EbBFb7175D",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "inputs": [
@@ -1854,7 +1862,11 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
+<<<<<<< HEAD
       "address": "0x7036124464A2d2447516309169322c8498ac51e3",
+=======
+      "address": "0xa195ACcEB1945163160CD5703Ed43E4f78176a54",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "anonymous": false,
@@ -2117,7 +2129,11 @@ const deployedContracts = {
       ]
     },
     "MockPYUSD": {
+<<<<<<< HEAD
       "address": "0xeE1eb820BeeCED56657bA74fa8D70748D7A6756C",
+=======
+      "address": "0x6212cb549De37c25071cF506aB7E115D140D9e42",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "anonymous": false,
@@ -2380,7 +2396,11 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
+<<<<<<< HEAD
       "address": "0x5c932424AcBfab036969b3B9D94bA9eCbae7565D",
+=======
+      "address": "0x6F9679BdF5F180a139d01c598839a5df4860431b",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "stateMutability": "payable",
@@ -2622,7 +2642,11 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
+<<<<<<< HEAD
       "address": "0x0724F18B2aA7D6413D3fDcF6c0c27458a8170Dd9",
+=======
+      "address": "0x0bF7dE8d71820840063D4B8653Fd3F0618986faF",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "inputs": [
@@ -4604,7 +4628,11 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
+<<<<<<< HEAD
       "address": "0xE7FF84Df24A9a252B6E8A5BB093aC52B1d8bEEdf",
+=======
+      "address": "0xc981ec845488b8479539e6B22dc808Fb824dB00a",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "inputs": [
@@ -5228,7 +5256,11 @@ const deployedContracts = {
       ]
     },
     "MockEthOracle": {
+<<<<<<< HEAD
       "address": "0x3949c97925e5Aa13e34ddb18EAbf0B70ABB0C7d4",
+=======
+      "address": "0x3abBB0D6ad848d64c8956edC9Bf6f18aC22E1485",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "inputs": [
@@ -5370,7 +5402,11 @@ const deployedContracts = {
       ]
     },
     "PriceConsumer": {
+<<<<<<< HEAD
       "address": "0xa195ACcEB1945163160CD5703Ed43E4f78176a54",
+=======
+      "address": "0x021DBfF4A864Aa25c51F0ad2Cd73266Fde66199d",
+>>>>>>> 47ac52f (fixed injection)
       "abi": [
         {
           "inputs": [

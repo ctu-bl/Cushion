@@ -4,19 +4,25 @@ pragma solidity ^0.8.30;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
 
+<<<<<<< HEAD
 interface IMockEthOracle {
     function latestAnswer() external view returns (int256);
     function decimals() external view returns (uint8);
 }
 
+=======
+>>>>>>> 47ac52f (fixed injection)
 /**
  * @title MockUniswapRouter
  * @author CtuBlockhain Lab
  * @notice Mock implementation of Uniswap V3 router for testing
  */
 contract MockUniswapRouter {
+<<<<<<< HEAD
     address public immutable ethOracle;
     
+=======
+>>>>>>> 47ac52f (fixed injection)
     struct ExactInputSingleParams {
         address tokenIn;
         address tokenOut;
@@ -28,10 +34,13 @@ contract MockUniswapRouter {
         uint160 sqrtPriceLimitX96;
     }
     
+<<<<<<< HEAD
     constructor(address _ethOracle) {
         ethOracle = _ethOracle;
     }
     
+=======
+>>>>>>> 47ac52f (fixed injection)
     // Simple 1:1 swap for testing with actual token transfers
     function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {
         console.log("MockUniswapRouter: exactInputSingle called");
@@ -40,6 +49,7 @@ contract MockUniswapRouter {
         console.log("MockUniswapRouter: amountIn:", params.amountIn);
         console.log("MockUniswapRouter: recipient:", params.recipient);
         
+<<<<<<< HEAD
         // Get ETH price from oracle
         int256 ethPriceInt = IMockEthOracle(ethOracle).latestAnswer();
         uint8 ethPriceDecimals = IMockEthOracle(ethOracle).decimals();
@@ -57,6 +67,11 @@ contract MockUniswapRouter {
         
         // Default 1:1 for same tokens
         amountOut = params.amountIn;
+=======
+        // For testing: return same amount (1:1 swap)
+        amountOut = params.amountIn;
+        console.log("MockUniswapRouter: amountOut:", amountOut);
+>>>>>>> 47ac52f (fixed injection)
         
         // Transfer input tokens from caller to this contract
         console.log("MockUniswapRouter: attempting transferFrom from");
@@ -75,10 +90,15 @@ contract MockUniswapRouter {
             (bool hasDeposit, ) = params.tokenOut.call(abi.encodeWithSignature("deposit()"));
             if (hasDeposit) {
                 console.log("MockUniswapRouter: output is WETH, minting WETH tokens");
+<<<<<<< HEAD
                 // Convert PYUSD(1e6) -> WETH(1e18) using ETH price from oracle
                 // amountOut = amountIn * 1e18 / ethPriceUsd_e6
                 amountOut = (params.amountIn * 1e18) / ethPriceUsd_e6;
                 console.log("MockUniswapRouter: computed WETH amountOut:", amountOut);
+=======
+                console.log("MockUniswapRouter: available ETH balance:", address(this).balance);
+                console.log("MockUniswapRouter: amount to mint:", amountOut);
+>>>>>>> 47ac52f (fixed injection)
                 
                 // For testing purposes, just mint WETH tokens without sending ETH
                 // In real scenario, we would send ETH to WETH contract first
@@ -94,11 +114,15 @@ contract MockUniswapRouter {
                     console.log("MockUniswapRouter: direct transfer completed");
                 }
             } else {
+<<<<<<< HEAD
                 // If output is PYUSD, assume input is WETH and compute PYUSD amount
                 // amountOut = amountIn * ethPriceUsd_e6 / 1e18
                 amountOut = (params.amountIn * ethPriceUsd_e6) / 1e18;
                 console.log("MockUniswapRouter: computed PYUSD amountOut:", amountOut);
 
+=======
+                // For other tokens, just mint them
+>>>>>>> 47ac52f (fixed injection)
                 (bool mintSuccess, ) = params.tokenOut.call(
                     abi.encodeWithSignature("mint(address,uint256)", params.recipient, amountOut)
                 );
