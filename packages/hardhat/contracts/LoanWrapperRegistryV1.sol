@@ -78,14 +78,14 @@ contract LoanWrapperRegistry {
         require(WETH!=address(0) && USDC!=address(0), LoanWrapperRegistry__AssetsNotSet());
         require(msg.value > 0, LoanWrapperRegistry__NoETHSent());
 
-
         address wrapper = wrapperOf[borrower];
         if (wrapper == address(0)) {
-            LoanWrapper wrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, provider);
-            wrapperOf[borrower] = address(wrapper);
-            allWrappers.push(address(wrapper));
+            LoanWrapper newWrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, address(provider));
+            wrapper = address(newWrapper);
+            wrapperOf[borrower] = wrapper;
+            allWrappers.push(wrapper);
         } else{
-            LoanWrapper(wrapper).setActive();
+            LoanWrapper(payable(wrapper)).setActive();
         }
         emit LoanWrapped(borrower, wrapper, borrowedAmount, WETH);
 
@@ -96,12 +96,12 @@ contract LoanWrapperRegistry {
 
         // 3) deposit WETH do Aave NA ÚČET WRAPPERU (onBehalfOf = wrapper)
         IERC20(WETH).approve(address(pool), msg.value);
-        pool.deposit(WETH, msg.value, address(wrapper), 0);
+        pool.deposit(WETH, msg.value, wrapper, 0);
 
         // 4) borrow USDC NA ÚČET WRAPPERU (onBehalfOf = wrapper)
         //    Pozor: underlying USDC se po borrowu pošle volajícímu (registru),
         //    proto ho hned přepošleme borrowerovi.
-        pool.borrow(USDC, borrowedAmount, 2, 0, address(wrapper)); // 2 = VARIABLE
+        pool.borrow(USDC, borrowedAmount, 2, 0, wrapper); // 2 = VARIABLE
 
         require(IERC20(USDC).transfer(borrower, borrowedAmount), LoanWrapperRegistry__TransferFailed());
     }
