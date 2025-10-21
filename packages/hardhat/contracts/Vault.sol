@@ -230,7 +230,13 @@ contract Vault is ERC4626, Ownable {
     
         totalInjectedAssets += injectionAmountPyUsd;
 
-        //_burn(address(this), injectionAmountPyUsd);
+        // Odečíst PYUSD z Vaultu - transfer do dead address
+        console.log("Vault: burning PYUSD from vault, amount:", injectionAmountPyUsd);
+        console.log("Vault: PYUSD balance before burn:", IERC20(asset()).balanceOf(address(this)));
+        
+        // Transfer PYUSD do dead address (burn)
+        IERC20(asset()).transfer(address(0x000000000000000000000000000000000000dEaD), injectionAmountPyUsd);
+        console.log("Vault: PYUSD burned successfully");
 
         emit CapitalInjected(loan, amountEthOut);
     }
