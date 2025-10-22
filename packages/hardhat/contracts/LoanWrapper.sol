@@ -345,6 +345,7 @@ contract LoanWrapper is Ownable {
         }
 
         // --Effects--
+        IERC20(DEBT_TOKEN_ADDR).approve(address(PROVIDER.getPool()), amount);
         IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), amount);
         IPool pool = IPool(PROVIDER.getPool());
         pool.repay(DEBT_TOKEN_ADDR, amount, 2, address(this));
@@ -354,18 +355,77 @@ contract LoanWrapper is Ownable {
     }
     /// @notice This function can be called ONLY AND ONLY if there is sufficient balance
     // in the Vault to repay the loan
-    function repayLoan() external onlyOwnerOrVault {
+    function repayLoan() external payable onlyOwnerOrVault {
+        console.log("=== REPAY LOAN FUNCTION START ===");
+        console.log("Loan wrapper address:", address(this));
+        console.log("Borrowed amount:", s_borrowedAmount);
+        console.log("Initial collateral:", s_initCollateral);
+        console.log("Investor collateral:", s_investorCollateral);
+        console.log("Total collateral:", s_initCollateral + s_investorCollateral);
+        console.log("Is active:", isActive);
+        console.log("Is locked:", locked);
+        
         // --Checks--
+        if (msg.sender == owner() && locked){
+            console.log("ERROR: Wrapper is locked for owner");
+            revert LoanWrapper__WrapperNotUnlocked();
+        }
         if (s_borrowedAmount <= 0) {
+            console.log("ERROR: Nothing to repay");
             revert LoanWrapper__NothingToRepay();
         }
+
         // --Effects--
-        IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), s_borrowedAmount);
+        console.log("Approving pool to spend USDC tokens");
+        console.log("Pool address:", address(PROVIDER.getPool()));
+        console.log("USDC amount to approve:", s_borrowedAmount);
+        
+        // Approve pool to spend USDC tokens for repayment
+        IERC20(DEBT_TOKEN_ADDR).approve(address(PROVIDER.getPool()), s_borrowedAmount);
+        
+        console.log("Transferring USDC from sender to loan wrapper");
+        console.log("USDC balance before transfer:", IERC20(DEBT_TOKEN_ADDR).balanceOf(address(this)));
+        if (msg.sender == owner()) {
+            IERC20(DEBT_TOKEN_ADDR).transfer(msg.sender, s_borrowedAmount);
+        }
+
+        
+        console.log("USDC balance after transfer:", IERC20(DEBT_TOKEN_ADDR).balanceOf(address(this)));
+        
         IPool pool = IPool(PROVIDER.getPool());
+        console.log("Calling pool.repay with max amount");
         // Hopefully type(uint256).max is correct. It was in repay() desc on AAVE
         pool.repay(DEBT_TOKEN_ADDR, type(uint256).max, 2, address(this));
+        console.log("Pool repay completed");
+        
         s_borrowedAmount = 0;
-        // --Interactions--      ✖ yarn next:lint --fix --file app/simulation/page.tsx --file contracts/deployedContracts.ts [FAIL…
+        console.log("Borrowed amount reset to 0");
+        
+        isActive = false;
+        uint256 coll = s_initCollateral + s_investorCollateral;
+        console.log("Total collateral to withdraw:", coll);
+        
+        s_initCollateral = 0;
+        s_investorCollateral = 0;
+        console.log("Collateral amounts reset to 0");
+        
+        console.log("Withdrawing collateral from pool");
+        uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR, coll, address(this));
+        console.log("Collateral withdrawn from pool:", withdrawn);
+        
+        console.log("Unwrapping WETH to ETH");
+        IWETH9(COL_TOKEN_ADDR).withdraw(withdrawn);
+        console.log("WETH unwrapped, ETH balance:", address(this).balance);
+        
+        console.log("Sending ETH to sender");
+        (bool success, ) = payable(msg.sender).call{value: withdrawn}("");
+        if (!success) {
+            console.log("ERROR: ETH transfer failed");
+            revert LoanWrapper__WithdrawFailed();
+        }
+        console.log("ETH sent successfully to:", msg.sender);
+        console.log("=== REPAY LOAN FUNCTION END ===");
+        
         emit LoanRepaid(address(this));
     }
 

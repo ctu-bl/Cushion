@@ -7,6 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import "hardhat/console.sol";
+import "./mocks/MockUniswapRouter.sol";
 
 interface ISwapAdapter {
     function swapPyUsdToEth(address pyusd, uint256 amountPyUsd) external returns (uint256 ethOut);
@@ -72,6 +73,7 @@ contract Vault is ERC4626, Ownable {
     // ------------------CONSTANTS------------------
     address public immutable PYUSD_TOKEN; // asset()
     address public immutable WETH_TOKEN;
+    address public immutable DEBT_TOKEN_ADDR; // USDC address
     ISwapRouter public immutable SWAP_ROUTER;
     IChainlinkAggregator public immutable ETH_USD_FEED;
     IChainlinkAggregator public immutable PYUSD_USD_FEED;
@@ -123,10 +125,12 @@ contract Vault is ERC4626, Ownable {
         address _wethToken,
         address _swapRouter,
         address _ethUsdFeed,
-        address _pyusdUsdFeed
+        address _pyusdUsdFeed,
+        address _debtTokenAddr
     ) ERC4626(ERC20(_pyusdToken)) ERC20(_name, _symbol) Ownable(msg.sender) {
         PYUSD_TOKEN = _pyusdToken;
         WETH_TOKEN = _wethToken;
+        DEBT_TOKEN_ADDR = _debtTokenAddr;
         SWAP_ROUTER = ISwapRouter(_swapRouter);
         ETH_USD_FEED = IChainlinkAggregator(_ethUsdFeed);
         PYUSD_USD_FEED = IChainlinkAggregator(_pyusdUsdFeed);
@@ -281,27 +285,116 @@ contract Vault is ERC4626, Ownable {
     }
 
     function liquidate(address loan) external {
+        console.log("=== LIQUIDATE FUNCTION START ===");
+        console.log("Liquidating loan:", loan);
+        console.log("Vault PYUSD balance:", IERC20(asset()).balanceOf(address(this)));
+
         updateAccumulatedInterest();
 
         InjectedCapital memory injected = injectedAssets[loan];
-        if (injected.amountPyUsd == 0) revert Vault__NoInjectedAssets();
+        console.log("Injected amountPyUsd:", injected.amountPyUsd);
+        console.log("Injected amountEthSent:", injected.amountEthSent);
+        console.log("Injected initialAccumulatedInterest:", injected.initialAccumulatedInterest);
+        
+        if (injected.amountPyUsd == 0) {
+            console.log("ERROR: No injected assets found for this loan");
+            revert Vault__NoInjectedAssets();
+        }
 
-        uint256 amountToLiquidate = ILoanWrapper(loan).getTotalCollateralValue();
-        if (amountToLiquidate == 0) revert Vault__InvalidLoanAddress();
+        uint256 collateralValueEth = ILoanWrapper(loan).getTotalCollateralValue();
+        console.log("Collateral value in ETH:", collateralValueEth);
+        
+        if (collateralValueEth == 0) {
+            console.log("ERROR: Invalid loan address - no collateral value");
+            revert Vault__InvalidLoanAddress();
+        }
 
-        if (IERC20(asset()).balanceOf(address(this)) < amountToLiquidate) revert Vault__InsufficientLiquidity();
+        // Convert ETH collateral value to PYUSD
+        uint256 amountToLiquidatePyUsd = _getEthValueInPyusd(collateralValueEth);
+        console.log("Amount to liquidate in PYUSD:", amountToLiquidatePyUsd);
 
-        IERC20(asset()).approve(loan, amountToLiquidate);
+        uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
+        console.log("Vault PYUSD balance:", vaultBalance);
+        console.log("Required amount in PYUSD:", amountToLiquidatePyUsd);
+        
+        if (vaultBalance < amountToLiquidatePyUsd) {
+            console.log("ERROR: Insufficient liquidity in vault");
+            revert Vault__InsufficientLiquidity();
+        }
+
+        // Get the actual USDC amount needed for repayment
+        uint256 usdcAmountNeeded = ILoanWrapper(loan).getTotalDebtValue();
+        console.log("USDC amount needed for repayment:", usdcAmountNeeded);
+        
+        // For liquidation, we need USDC but Vault has PYUSD
+        // Convert 1:1 PYUSD to USDC (simplified for liquidation)
+        console.log("Converting PYUSD to USDC for repayment (1:1 ratio)");
+        uint256 pyusdAmountNeeded = usdcAmountNeeded; // 1:1 conversion
+        
+        // Check if we have enough PYUSD for the conversion
+        if (IERC20(asset()).balanceOf(address(this)) < pyusdAmountNeeded) {
+            console.log("ERROR: Insufficient PYUSD for USDC conversion");
+            revert Vault__InsufficientLiquidity();
+        }
+        
+        // For liquidation, swap PYUSD to USDC using simple 1:1 conversion
+        console.log("Swapping PYUSD to USDC for liquidation (1:1)");
+        console.log("PYUSD amount for swap:", pyusdAmountNeeded);
+        IERC20(asset()).approve(address(SWAP_ROUTER), pyusdAmountNeeded);
+        uint256 usdcReceived = MockUniswapRouter(address(SWAP_ROUTER)).swapPyUsdToUsdc(asset(), DEBT_TOKEN_ADDR, pyusdAmountNeeded);
+        console.log("USDC received from swap:", usdcReceived);
+    console.log("USDC balance of vault:", IERC20(DEBT_TOKEN_ADDR).balanceOf(address(this)));
+        
+        // Transfer USDC to loan wrapper for repayment
+        console.log("Transferring USDC to loan wrapper for repayment");
+        IERC20(DEBT_TOKEN_ADDR).transfer(loan, usdcReceived);
+        console.log("USDC transferred to loan:", usdcReceived);
+        
+        console.log("Calling repayLoan on loan wrapper");
         ILoanWrapper(loan).repayLoan();
 
+        // After repaying the loan, withdraw all collateral
+        uint256 investorCollateral = ILoanWrapper(loan).getInvestorCollateralValue();
+        uint256 userCollateral = ILoanWrapper(loan).getOwnerCollateralValue();
+        console.log("Investor collateral to withdraw:", investorCollateral);
+        console.log("User collateral to withdraw:", userCollateral);
+        
+        if (investorCollateral > 0 || userCollateral > 0) {
+            console.log("Withdrawing all collateral from loan wrapper");
+            ILoanWrapper(loan).decreaseCollateralForVault(investorCollateral, userCollateral);
+            
+            uint256 totalEthReceived = investorCollateral + userCollateral;
+            console.log("Total ETH received from collateral:", totalEthReceived);
+            
+            // Convert ETH back to PYUSD and keep it in vault
+            uint256 pyusdFromCollateral = _swapEthToPyUsd(totalEthReceived);
+            console.log("PYUSD received from collateral swap:", pyusdFromCollateral);
+        }
+
+        console.log("Updating totalInjectedAssets");
+        console.log("Current totalInjectedAssets:", totalInjectedAssets);
+        console.log("Injected amountEthSent:", injected.amountEthSent);
+        
         if (totalInjectedAssets >= injected.amountEthSent) {
             totalInjectedAssets -= injected.amountEthSent;
         } else {
             totalInjectedAssets = 0;
         }
+        
+        console.log("New totalInjectedAssets:", totalInjectedAssets);
+        
+        console.log("Deleting injected assets for loan");
         delete injectedAssets[loan];
 
-        emit LoanLiquidated(loan, amountToLiquidate);
+        console.log("Emitting LoanLiquidated event");
+
+        uint256 pyusdFromEth = _swapEthToPyUsd(address(this).balance);
+        
+        totalInjectedAssets += pyusdFromEth;
+
+        emit LoanLiquidated(loan, amountToLiquidatePyUsd);
+        
+        console.log("=== LIQUIDATE FUNCTION END ===");
     }
 
     // ------------------- SWAPS -------------------
@@ -345,6 +438,32 @@ contract Vault is ERC4626, Ownable {
         uint256 amountPyUsdOut = SWAP_ROUTER.exactInputSingle(params);
         if (amountPyUsdOut == 0) revert Vault__SwapFailed();
         return amountPyUsdOut;
+    }
+
+    function _swapPyUsdToUsdc(uint256 amountIn) internal virtual returns (uint256) {
+        IERC20(PYUSD_TOKEN).approve(address(SWAP_ROUTER), amountIn);
+
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: PYUSD_TOKEN,
+            tokenOut: DEBT_TOKEN_ADDR, // USDC
+            fee: 3000,
+            recipient: address(this),
+            deadline: block.timestamp,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        });
+
+        uint256 amountOut = SWAP_ROUTER.exactInputSingle(params);
+        if (amountOut == 0) revert Vault__SwapFailed();
+
+        return amountOut;
+    }
+
+    function _getPyusdAmountForUsdc(uint256 usdcAmount) internal view returns (uint256) {
+        // For mock purposes, assume 1:1 conversion PYUSD to USDC
+        // In real scenario, you would use price feeds to calculate the conversion
+        return usdcAmount;
     }
 
     // ------------------- VIEW / HELPERS -------------------

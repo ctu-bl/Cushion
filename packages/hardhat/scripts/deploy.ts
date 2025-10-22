@@ -142,7 +142,8 @@ async function main() {
     mockWETH.address,
     mockSwapRouter.address,
     mockEthUsdFeed.address,
-    mockPyusdUsdFeed.address
+    mockPyusdUsdFeed.address,
+    mockUSDC.address
   );
   await vault.deployTransaction.wait();
   const vaultAddress = vault.address;
