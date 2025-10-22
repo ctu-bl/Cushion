@@ -343,6 +343,7 @@ contract Vault is ERC4626, Ownable {
         IERC20(asset()).approve(address(SWAP_ROUTER), pyusdAmountNeeded);
         uint256 usdcReceived = MockUniswapRouter(address(SWAP_ROUTER)).swapPyUsdToUsdc(asset(), DEBT_TOKEN_ADDR, pyusdAmountNeeded);
         console.log("USDC received from swap:", usdcReceived);
+    console.log("USDC balance of vault:", IERC20(DEBT_TOKEN_ADDR).balanceOf(address(this)));
         
         // Transfer USDC to loan wrapper for repayment
         console.log("Transferring USDC to loan wrapper for repayment");
