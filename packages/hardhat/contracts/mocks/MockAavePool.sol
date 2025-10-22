@@ -158,12 +158,20 @@ abstract contract MockPool is IPool {
     }
 
     function repay(address asset, uint256 amount, uint256, address onBehalfOf) external override returns (uint256) {
+        require(asset == usdc, "only USDC in mock");
+        
         uint256 repaid = amount;
         if (repaid == type(uint256).max) {
             (, repaid, , , , ) = this.getUserAccountData(onBehalfOf);
         }
         if (debtByUser[onBehalfOf] < repaid) repaid = debtByUser[onBehalfOf];
-        if (repaid > 0) debtByUser[onBehalfOf] -= repaid;
+        
+        if (repaid > 0) {
+            // Transfer USDC from caller to pool (actual repayment)
+            require(IERC20Like(asset).transferFrom(msg.sender, address(this), repaid), "repay transfer failed");
+            debtByUser[onBehalfOf] -= repaid;
+        }
+        
         return repaid;
     }
 

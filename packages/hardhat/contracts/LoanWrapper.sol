@@ -345,6 +345,7 @@ contract LoanWrapper is Ownable {
         }
 
         // --Effects--
+        IERC20(DEBT_TOKEN_ADDR).approve(address(PROVIDER.getPool()), amount);
         IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), amount);
         IPool pool = IPool(PROVIDER.getPool());
         pool.repay(DEBT_TOKEN_ADDR, amount, 2, address(this));
@@ -354,17 +355,35 @@ contract LoanWrapper is Ownable {
     }
     /// @notice This function can be called ONLY AND ONLY if there is sufficient balance
     // in the Vault to repay the loan
-    function repayLoan() external onlyOwnerOrVault {
+    function repayLoan() external payable onlyOwnerOrVault {
         // --Checks--
+        if (msg.sender == owner() && locked){
+            revert LoanWrapper__WrapperNotUnlocked();
+        }
         if (s_borrowedAmount <= 0) {
             revert LoanWrapper__NothingToRepay();
         }
+
         // --Effects--
+        // Approve pool to spend USDC tokens for repayment
+        IERC20(DEBT_TOKEN_ADDR).approve(address(PROVIDER.getPool()), s_borrowedAmount);
         IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), s_borrowedAmount);
         IPool pool = IPool(PROVIDER.getPool());
         // Hopefully type(uint256).max is correct. It was in repay() desc on AAVE
         pool.repay(DEBT_TOKEN_ADDR, type(uint256).max, 2, address(this));
         s_borrowedAmount = 0;
+        
+        isActive = false;
+        uint256 coll = s_initCollateral + s_investorCollateral;
+        s_initCollateral = 0;
+        s_investorCollateral = 0;
+        uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR,
+            coll, address(this));
+        IWETH9(COL_TOKEN_ADDR).withdraw(withdrawn);
+        (bool success, ) = payable(msg.sender).call{value: withdrawn}("");
+        if (!success) {
+            revert LoanWrapper__WithdrawFailed();
+        }
         // --Interactions--      ✖ yarn next:lint --fix --file app/simulation/page.tsx --file contracts/deployedContracts.ts [FAIL…
         emit LoanRepaid(address(this));
     }
