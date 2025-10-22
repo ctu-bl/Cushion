@@ -465,12 +465,6 @@ contract Vault is ERC4626, Ownable {
         return injected.amountPyUsd.mulDiv(currentAccInterest, injected.initialAccumulatedInterest);
     }
 
-    receive() external payable {
-        console.log("Vault: received ETH:", msg.value);
-        console.log("Vault: total ETH balance now:", address(this).balance);
-        // Don't automatically convert ETH to PYUSD - keep it for collateral operations
-        // ETH will be used for increaseCollateral{value: ...} calls
-    }
 
     function _getTotalLoanValue() internal view returns (uint256) {
         return totalInjectedAssets;

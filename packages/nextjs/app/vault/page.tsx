@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-<<<<<<< HEAD
-import { useAccount, useWaitForTransactionReceipt } from "wagmi";
-import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-=======
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
->>>>>>> 47ac52f (fixed injection)
 
 export default function VaultPage() {
   const { isConnected, address } = useAccount();
@@ -33,21 +28,9 @@ export default function VaultPage() {
   const PYUSD_ADDRESS = mockPYUSDInfo?.address;
   const VAULT_ADDRESS = vaultInfo?.address;
 
-  const { writeContractAsync } = useScaffoldWriteContract("Vault");
-  const { writeContractAsync: writePyusdContractAsync } = useScaffoldWriteContract("MockPYUSD");
+  const { writeContractAsync } = useWriteContract();
 
   // Read PYUSD balance
-<<<<<<< HEAD
-  const { data: pyusdBalance, refetch: refetchPyusdBalance } = useScaffoldReadContract({
-    contractName: "MockPYUSD",
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-  });
-
-  // Read Vault total assets
-  const { data: vaultTotalAssets, refetch: refetchVaultTotalAssets } = useScaffoldReadContract({
-    contractName: "Vault",
-=======
   const { data: pyusdBalance, refetch: refetchPyusdBalance } = useReadContract({
     address: PYUSD_ADDRESS,
     abi: mockPYUSDInfo?.abi,
@@ -62,7 +45,6 @@ export default function VaultPage() {
   const { data: vaultTotalAssets, refetch: refetchVaultTotalAssets } = useReadContract({
     address: VAULT_ADDRESS,
     abi: vaultInfo?.abi,
->>>>>>> 47ac52f (fixed injection)
     functionName: "totalAssets",
     query: {
       enabled: !!VAULT_ADDRESS,
@@ -70,19 +52,6 @@ export default function VaultPage() {
   });
 
   // Read user's Vault shares
-<<<<<<< HEAD
-  const { data: userVaultShares, refetch: refetchUserVaultShares } = useScaffoldReadContract({
-    contractName: "Vault",
-    functionName: "balanceOf",
-    args: [address],
-  });
-
-  // Convert user's shares to assets
-  const { data: userVaultAssets, refetch: refetchUserVaultAssets } = useScaffoldReadContract({
-    contractName: "Vault",
-    functionName: "convertToAssets",
-    args: userVaultShares ? [userVaultShares] : undefined,
-=======
   const { data: userVaultShares, refetch: refetchUserVaultShares } = useReadContract({
     address: VAULT_ADDRESS,
     abi: vaultInfo?.abi,
@@ -102,7 +71,6 @@ export default function VaultPage() {
     query: {
       enabled: !!userVaultShares && !!VAULT_ADDRESS,
     },
->>>>>>> 47ac52f (fixed injection)
   });
 
   // Format PYUSD balance (6 decimals)
@@ -220,13 +188,9 @@ export default function VaultPage() {
       setDepositError(undefined);
       const amount = parseFloat(depositAmount) * 1000000; // Convert to 6 decimals
       const hash = await writeContractAsync({
-<<<<<<< HEAD
-        functionName: "depositFor",
-=======
         address: VAULT_ADDRESS,
         abi: vaultInfo?.abi,
         functionName: "deposit",
->>>>>>> 47ac52f (fixed injection)
         args: [BigInt(amount), address!],
       });
       setDepositTxHash(hash);
@@ -245,15 +209,10 @@ export default function VaultPage() {
       
       // Use withdrawAmount function from Vault contract
       const hash = await writeContractAsync({
-<<<<<<< HEAD
-        functionName: "withdrawAmount",
-        args: [BigInt(amount), address!],
-=======
         address: VAULT_ADDRESS,
         abi: vaultInfo?.abi,
         functionName: "withdraw",
         args: [BigInt(amount), address!, address!],
->>>>>>> 47ac52f (fixed injection)
       });
       setWithdrawTxHash(hash);
     setShowWithdrawModal(false);
@@ -268,13 +227,9 @@ export default function VaultPage() {
     try {
       setApproveError(undefined);
       const amount = parseFloat(approveAmount) * 1000000; // Convert to 6 decimals
-<<<<<<< HEAD
-      const hash = await writePyusdContractAsync({
-=======
       const hash = await writeContractAsync({
         address: PYUSD_ADDRESS,
         abi: mockPYUSDInfo?.abi,
->>>>>>> 47ac52f (fixed injection)
         functionName: "approve",
         args: [VAULT_ADDRESS, BigInt(amount)],
       });
@@ -286,6 +241,21 @@ export default function VaultPage() {
       setApproveError(error instanceof Error ? error.message : "Approve failed");
     }
   };
+
+  // Show loading if contracts are not loaded
+  if (!PYUSD_ADDRESS || !VAULT_ADDRESS) {
+    return (
+      <main className="min-h-screen bg-base-200 py-12 px-4 md:px-8">
+        <div className="container mx-auto">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold mb-4 text-base-content">Vault</h1>
+            <div className="loading loading-spinner loading-lg"></div>
+            <p className="text-lg text-base-content/70 mt-4">Loading contracts...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   // Show loading if contracts are not loaded
   if (!PYUSD_ADDRESS || !VAULT_ADDRESS) {

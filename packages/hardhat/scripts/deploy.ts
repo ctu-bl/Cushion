@@ -40,7 +40,6 @@ async function main() {
   await mockWETH.deployTransaction.wait();
   console.log("✅ Mock WETH deployed to:", mockWETH.address);
 
-<<<<<<< HEAD
   // Deploy MockEthOracle
   const MockEthOracleArtifact = await hre.artifacts.readArtifact("MockEthOracle");
   const MockEthOracleFactory = new ethersLib.ContractFactory(MockEthOracleArtifact.abi, MockEthOracleArtifact.bytecode, deployer);
@@ -53,24 +52,13 @@ async function main() {
   // Seed MockWETH9 with ETH
   console.log("\n💰 Seeding MockWETH9 with ETH...");
   const wethEthAmount = ethersLib.utils.parseEther("200"); // 200 ETH (increased for pool operations)
-=======
-  // Seed MockWETH9 with ETH
-  console.log("\n💰 Seeding MockWETH9 with ETH...");
-  const wethEthAmount = ethersLib.utils.parseEther("20"); // 20 ETH (reduced)
->>>>>>> 47ac52f (fixed injection)
   await deployer.sendTransaction({
     to: mockWETH.address,
     value: wethEthAmount
   });
-<<<<<<< HEAD
   console.log("✅ MockWETH9 seeded with 200 ETH");
 
   // Deploy MockPoolImpl (constructor expects USDC, WETH, and ETH Oracle)
-=======
-  console.log("✅ MockWETH9 seeded with 20 ETH");
-
-  // Deploy MockPoolImpl (constructor expects USDC and WETH)
->>>>>>> 47ac52f (fixed injection)
   const MockPoolImplArtifact = await hre.artifacts.readArtifact("MockPoolImpl");
   const MockPoolImplFactory = new ethersLib.ContractFactory(MockPoolImplArtifact.abi, MockPoolImplArtifact.bytecode, deployer);
   const mockPool = await MockPoolImplFactory.deploy(mockUSDC.address, mockWETH.address, mockEthOracle.address);
@@ -115,11 +103,7 @@ async function main() {
   console.log("\n🔄 Deploying Mock Uniswap Router...");
   const MockUniswapRouterArtifact = await hre.artifacts.readArtifact("MockUniswapRouter");
   const MockUniswapRouterFactory = new ethersLib.ContractFactory(MockUniswapRouterArtifact.abi, MockUniswapRouterArtifact.bytecode, deployer);
-<<<<<<< HEAD
-  const mockSwapRouter = await MockUniswapRouterFactory.deploy(mockEthOracle.address);
-=======
   const mockSwapRouter = await MockUniswapRouterFactory.deploy();
->>>>>>> 47ac52f (fixed injection)
   await mockSwapRouter.deployTransaction.wait();
   console.log("✅ Mock Uniswap Router deployed to:", mockSwapRouter.address);
 
@@ -164,18 +148,6 @@ async function main() {
   const vaultAddress = vault.address;
   console.log("✅ Vault deployed to:", vaultAddress);
 
-<<<<<<< HEAD
-  // ========== Vault starts empty ==========
-  console.log("\n💰 Vault starts empty - no initial PYUSD seeding");
-
-  // ========== Seed Deployer with PYUSD for testing ==========
-  console.log("\n💰 Seeding Deployer with PYUSD for testing...");
-  await mockPYUSD.mint(deployer.address, ethersLib.BigNumber.from(10000n * 10n ** 6n)); // 10K PYUSD
-  console.log("✅ Deployer seeded with 10K PYUSD for testing");
-
-  // ========== Seed Vault with ETH ==========
-  //  will receive ETH from WETH withdraw operations, no need to seed with ETH
-=======
   // ========== Seed Vault with PYUSD ==========
   console.log("\n💰 Seeding Vault with PYUSD...");
   await mockPYUSD.mint(vaultAddress, ethersLib.BigNumber.from(1000000n * 10n ** 6n)); // 1M PYUSD
@@ -183,7 +155,6 @@ async function main() {
 
   // ========== Seed Vault with ETH ==========
   // Vault will receive ETH from WETH withdraw operations, no need to seed with ETH
->>>>>>> 47ac52f (fixed injection)
   console.log("✅ Vault will receive ETH from WETH operations");
 
   // ========== Deploy LoanWrapperRegistry ==========
@@ -262,10 +233,7 @@ async function main() {
     mockEthUsdFeed: mockEthUsdFeed.address,
     mockPyusdUsdFeed: mockPyusdUsdFeed.address,
     mockSwapRouter: mockSwapRouter.address,
-<<<<<<< HEAD
     mockEthOracle: mockEthOracle.address,
-=======
->>>>>>> 47ac52f (fixed injection)
   };
   await generateDeployedContracts(vaultAddress, registryAddress, mockAddresses);
 }
