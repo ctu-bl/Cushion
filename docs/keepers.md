@@ -46,7 +46,7 @@ Below is a simplified diagram showing how the bot operates:
         │  (simulate_price)      │          │   (monitoring)         │
         └────────────────────────┘          └────────────────────────┘
                     │                                   │
-   ┌────────────────┴───────────────┐       ┌───────────┴──────────────────┐
+   ┌────────────────────────────────┐       ┌──────────────────────────────┐
    │ Randomly adjust ETH price      │       │ Get all active loan wrappers │
    │ by ±VOLATILITY percent         │       │ from LoanWrapperRegistry     │
    └────────────────┬───────────────┘       └───────────┬──────────────────┘
@@ -54,7 +54,7 @@ Below is a simplified diagram showing how the bot operates:
         Set new price on-chain via           For each wrapper:
           MockEthOracle.setPrice()                 │
                     │                              │
-                    │                       ┌──────┴──────────────────────────────┐
+                    │                       ┌─────────────────────────────────────┐
                     │                       │ Retrieve HF value (getHF)           │
                     │                       │ Check if loan is locked (isLocked)  │
                     │                       └──────┬──────────────────────────────┘
