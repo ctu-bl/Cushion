@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.30;
 
 import {LoanWrapperRegistry} from "../contracts/LoanWrapperRegistryV1.sol";
