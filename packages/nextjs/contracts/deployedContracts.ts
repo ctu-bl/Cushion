@@ -8,10 +8,14 @@ const deployedContracts = {
   "31337": {
     "Vault": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x0c03eCB91Cb50835e560a7D52190EB1a5ffba797",
 =======
       "address": "0xAe2563b4315469bF6bdD41A6ea26157dE57Ed94e",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0xAdE429ba898c34722e722415D722A70a297cE3a2",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "inputs": [
@@ -1571,10 +1575,14 @@ const deployedContracts = {
     },
     "LoanWrapperRegistry": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0xb04CB6c52E73CF3e2753776030CE85a36549c9C2",
 =======
       "address": "0x85495222Fd7069B987Ca38C2142732EbBFb7175D",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0xcE0066b1008237625dDDBE4a751827de037E53D2",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "inputs": [
@@ -1863,10 +1871,14 @@ const deployedContracts = {
     },
     "MockUSDC": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x7036124464A2d2447516309169322c8498ac51e3",
 =======
       "address": "0xa195ACcEB1945163160CD5703Ed43E4f78176a54",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0xf090f16dEc8b6D24082Edd25B1C8D26f2bC86128",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "anonymous": false,
@@ -2130,10 +2142,14 @@ const deployedContracts = {
     },
     "MockPYUSD": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0xeE1eb820BeeCED56657bA74fa8D70748D7A6756C",
 =======
       "address": "0x6212cb549De37c25071cF506aB7E115D140D9e42",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0xd9140951d8aE6E5F625a02F5908535e16e3af964",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "anonymous": false,
@@ -2397,10 +2413,14 @@ const deployedContracts = {
     },
     "MockWETH": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x5c932424AcBfab036969b3B9D94bA9eCbae7565D",
 =======
       "address": "0x6F9679BdF5F180a139d01c598839a5df4860431b",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0x56D13Eb21a625EdA8438F55DF2C31dC3632034f5",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "stateMutability": "payable",
@@ -2643,10 +2663,14 @@ const deployedContracts = {
     },
     "MockPool": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x0724F18B2aA7D6413D3fDcF6c0c27458a8170Dd9",
 =======
       "address": "0x0bF7dE8d71820840063D4B8653Fd3F0618986faF",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0x071586BA1b380B00B793Cc336fe01106B0BFbE6D",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "inputs": [
@@ -4629,10 +4653,14 @@ const deployedContracts = {
     },
     "MockAddressesProvider": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0xE7FF84Df24A9a252B6E8A5BB093aC52B1d8bEEdf",
 =======
       "address": "0xc981ec845488b8479539e6B22dc808Fb824dB00a",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0xe70f935c32dA4dB13e7876795f1e175465e6458e",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "inputs": [
@@ -5257,10 +5285,14 @@ const deployedContracts = {
     },
     "MockEthOracle": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x3949c97925e5Aa13e34ddb18EAbf0B70ABB0C7d4",
 =======
       "address": "0x3abBB0D6ad848d64c8956edC9Bf6f18aC22E1485",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0xE8addD62feD354203d079926a8e563BC1A7FE81e",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "inputs": [
@@ -5403,10 +5435,14 @@ const deployedContracts = {
     },
     "PriceConsumer": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0xa195ACcEB1945163160CD5703Ed43E4f78176a54",
 =======
       "address": "0x021DBfF4A864Aa25c51F0ad2Cd73266Fde66199d",
 >>>>>>> 47ac52f (fixed injection)
+=======
+      "address": "0x87006e75a5B6bE9D1bbF61AC8Cd84f05D9140589",
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
       "abi": [
         {
           "inputs": [

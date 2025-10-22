@@ -21,7 +21,11 @@ interface ILoanWrapper {
     function getTotalDebtValue() external view returns (uint256);
     function increaseCollateral(uint256 amount) external payable;
     function decreaseCollateral(uint256 amount) external payable;
+<<<<<<< HEAD
     function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external;
+=======
+    function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external payable;
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
     function getOwnerCollateralValue() external view returns (uint256);
     function getInvestorCollateralValue() external view returns (uint256);
     function repayLoan() external;
@@ -315,12 +319,23 @@ contract Vault is ERC4626, Ownable {
         emit CapitalInjected(loan, amountEthOut);
     }
 
+<<<<<<< HEAD
+=======
+    /**
+     * @notice Withdraws previously injected capital from a recovered loan.
+     * @param loan Address of the Cushion LoanWrapper.
+     * @dev Can be called by anyone when a loan's HF is above the withdrawal threshold.
+     * @dev Withdraws: 100% investor collateral + 3% of user collateral
+     * @dev Converts withdrawn ETH to PYUSD and deposits to Vault
+     */
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
     function withdrawFromLoan(address loan) external {
         updateAccumulatedInterest();
         
         InjectedCapital memory injected = injectedAssets[loan];
         if (injected.amountPyUsd == 0) revert Vault__NoInjectedAssets();
         
+<<<<<<< HEAD
         uint256 investorCollateral = ILoanWrapper(loan).getInvestorCollateralValue();
         uint256 userCollateral = ILoanWrapper(loan).getOwnerCollateralValue();
 
@@ -339,6 +354,42 @@ contract Vault is ERC4626, Ownable {
 
         emit CapitalWithdrawn(loan, totalEthToWithdraw);
         pyusdReceived; // silence warning
+=======
+        // Get collateral amounts
+        uint256 investorCollateral = ILoanWrapper(loan).getInvestorCollateralValue();
+        uint256 userCollateral = ILoanWrapper(loan).getOwnerCollateralValue();
+        
+        console.log("Vault: withdrawFromLoan - investorCollateral:", investorCollateral);
+        console.log("Vault: withdrawFromLoan - userCollateral:", userCollateral);
+        
+        // Calculate withdrawal: 100% investor + 3% user collateral
+        uint256 userCollateralToWithdraw = (investorCollateral * 3) / 100; // 3% of user collateral
+        
+        console.log("Vault: withdrawFromLoan - userCollateralToWithdraw (3%):", userCollateralToWithdraw);
+        console.log("Vault: withdrawFromLoan - investorCollateral to withdraw:", investorCollateral);
+        
+        // Withdraw both investor and user collateral in one call
+        console.log("Vault: withdrawFromLoan - calling decreaseCollateralForVault");
+        console.log("Vault: withdrawFromLoan - investorAmount:", investorCollateral);
+        console.log("Vault: withdrawFromLoan - userAmount:", userCollateralToWithdraw);
+        
+        ILoanWrapper(loan).decreaseCollateralForVault(investorCollateral, userCollateralToWithdraw);
+
+
+        uint256 totalEthToWithdraw = investorCollateral + userCollateralToWithdraw;
+        
+        // Convert received ETH to PYUSD and deposit to Vault
+        uint256 pyusdReceived = _swapEthToPyUsd(totalEthToWithdraw);
+        console.log("Vault: withdrawFromLoan - pyusdReceived:", pyusdReceived);
+        
+        // Update accounting
+        totalInjectedAssets -= injected.amountPyUsd;
+        delete injectedAssets[loan];
+        
+        emit CapitalWithdrawn(loan, totalEthToWithdraw);
+        console.log("Vault: withdrawFromLoan completed successfully");
+        console.log("Vault: PYUSD deposited to Vault:", pyusdReceived);
+>>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
     }
 
     function liquidate(address loan) external {
