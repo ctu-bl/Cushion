@@ -249,11 +249,7 @@ contract LoanWrapper is Ownable {
      * @param userAmount Amount of user collateral to withdraw
      * @dev Only callable by Vault
      */
-<<<<<<< HEAD
     function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external onlyOwnerOrVault {
-=======
-    function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external payable onlyOwnerOrVault {
->>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
         // --Checks--
         
         uint256 totalAmount = investorAmount + userAmount;
@@ -294,7 +290,6 @@ contract LoanWrapper is Ownable {
         }
 
         // ---- Interactions (unwrap and payout) ----
-<<<<<<< HEAD
         console.log("LoanWrapper: withdrawing WETH amount:", totalAmount);
         console.log("LoanWrapper: WETH balance before withdraw:", IERC20(COL_TOKEN_ADDR).balanceOf(address(this)));
         IWETH9(COL_TOKEN_ADDR).withdraw(totalAmount);
@@ -303,10 +298,6 @@ contract LoanWrapper is Ownable {
         (bool success, ) = payable(msg.sender).call{value: totalAmount}("");
         console.log("LoanWrapper: ETH send success:", success);
         console.log("LoanWrapper: ETH balance after send:", address(this).balance);
-=======
-        IWETH9(COL_TOKEN_ADDR).withdraw(totalAmount);
-        (bool success, ) = payable(msg.sender).call{value: totalAmount}("");
->>>>>>> ce4a472 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
         if (!success) revert LoanWrapper__WithdrawFailed();
 
         emit CollateralDecreased(address(this), msg.sender, totalAmount);
@@ -393,7 +384,6 @@ contract LoanWrapper is Ownable {
         }
         // --Interactions--
         isActive = false; //Loan is repaid, wrapper is inactive
-        // --Interactions--      ✖ yarn next:lint --fix --file app/simulation/page.tsx --file contracts/deployedContracts.ts [FAIL…
         emit LoanRepaid(address(this));
     }
 
@@ -468,5 +458,19 @@ contract LoanWrapper is Ownable {
         int256 debtChange
     ) public pure returns (uint256) {
         return computeHF(totalCollateralBase, totalDebtBase, currentLiquidationThreshold, collateralChange, debtChange);
+    }
+
+    function setActive() external onlyOwnerOrVault {
+        isActive = true;
+    }
+
+    /**
+     * @notice Calculates current Health Factor for this wrapper using pool data.
+     * @dev Uses the same formula as computeHF with zero pending deltas.
+     */
+    function calculatedHF() external view returns (uint256) {
+        IPool pool = IPool(PROVIDER.getPool());
+        (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
+        return computeHF(col, debt, lt, 0, 0);
     }
 }
