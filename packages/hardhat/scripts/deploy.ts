@@ -103,7 +103,7 @@ async function main() {
   console.log("\n🔄 Deploying Mock Uniswap Router...");
   const MockUniswapRouterArtifact = await hre.artifacts.readArtifact("MockUniswapRouter");
   const MockUniswapRouterFactory = new ethersLib.ContractFactory(MockUniswapRouterArtifact.abi, MockUniswapRouterArtifact.bytecode, deployer);
-  const mockSwapRouter = await MockUniswapRouterFactory.deploy();
+  const mockSwapRouter = await MockUniswapRouterFactory.deploy(mockEthOracle.address);
   await mockSwapRouter.deployTransaction.wait();
   console.log("✅ Mock Uniswap Router deployed to:", mockSwapRouter.address);
 
@@ -149,9 +149,8 @@ async function main() {
   console.log("✅ Vault deployed to:", vaultAddress);
 
   // ========== Seed Vault with PYUSD ==========
-  console.log("\n💰 Seeding Vault with PYUSD...");
-  await mockPYUSD.mint(vaultAddress, ethersLib.BigNumber.from(1000000n * 10n ** 6n)); // 1M PYUSD
-  console.log("✅ Vault seeded with 1M PYUSD");
+  // Skipping PYUSD seeding - vault will start empty
+  console.log("✅ Vault will start empty (no PYUSD seeding)");
 
   // ========== Seed Vault with ETH ==========
   // Vault will receive ETH from WETH withdraw operations, no need to seed with ETH
