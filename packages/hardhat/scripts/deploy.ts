@@ -40,6 +40,15 @@ async function main() {
   await mockWETH.deployTransaction.wait();
   console.log("✅ Mock WETH deployed to:", mockWETH.address);
 
+  // Deploy MockEthOracle
+  const MockEthOracleArtifact = await hre.artifacts.readArtifact("MockEthOracle");
+  const MockEthOracleFactory = new ethersLib.ContractFactory(MockEthOracleArtifact.abi, MockEthOracleArtifact.bytecode, deployer);
+  // Initial price: 2000 USD with 8 decimals (like Chainlink)
+  const initialEthPrice = ethersLib.BigNumber.from("200000000000"); // 2000 * 10^8
+  const mockEthOracle = await MockEthOracleFactory.deploy(initialEthPrice, 8);
+  await mockEthOracle.deployTransaction.wait();
+  console.log("✅ Mock ETH Oracle deployed to:", mockEthOracle.address);
+
   // Seed MockWETH9 with ETH
   console.log("\n💰 Seeding MockWETH9 with ETH...");
   const wethEthAmount = ethersLib.utils.parseEther("20"); // 20 ETH (reduced)
@@ -49,10 +58,10 @@ async function main() {
   });
   console.log("✅ MockWETH9 seeded with 20 ETH");
 
-  // Deploy MockPoolImpl (constructor expects USDC and WETH)
+  // Deploy MockPoolImpl (constructor expects USDC, WETH, and ETH Oracle)
   const MockPoolImplArtifact = await hre.artifacts.readArtifact("MockPoolImpl");
   const MockPoolImplFactory = new ethersLib.ContractFactory(MockPoolImplArtifact.abi, MockPoolImplArtifact.bytecode, deployer);
-  const mockPool = await MockPoolImplFactory.deploy(mockUSDC.address, mockWETH.address);
+  const mockPool = await MockPoolImplFactory.deploy(mockUSDC.address, mockWETH.address, mockEthOracle.address);
   await mockPool.deployTransaction.wait();
   console.log("✅ Mock Pool deployed to:", mockPool.address);
 
@@ -94,7 +103,7 @@ async function main() {
   console.log("\n🔄 Deploying Mock Uniswap Router...");
   const MockUniswapRouterArtifact = await hre.artifacts.readArtifact("MockUniswapRouter");
   const MockUniswapRouterFactory = new ethersLib.ContractFactory(MockUniswapRouterArtifact.abi, MockUniswapRouterArtifact.bytecode, deployer);
-  const mockSwapRouter = await MockUniswapRouterFactory.deploy();
+  const mockSwapRouter = await MockUniswapRouterFactory.deploy(mockEthOracle.address);
   await mockSwapRouter.deployTransaction.wait();
   console.log("✅ Mock Uniswap Router deployed to:", mockSwapRouter.address);
 
@@ -224,6 +233,7 @@ async function main() {
     mockEthUsdFeed: mockEthUsdFeed.address,
     mockPyusdUsdFeed: mockPyusdUsdFeed.address,
     mockSwapRouter: mockSwapRouter.address,
+    mockEthOracle: mockEthOracle.address,
   };
   await generateDeployedContracts(vaultAddress, registryAddress, mockAddresses);
 }
@@ -285,7 +295,7 @@ async function generateDeployedContracts(vaultAddress: string, registryAddress: 
         abi: MockATokenABI,
       },
       MockEthOracle: {
-        address: mockAddresses.oracleAddress,
+        address: mockAddresses.mockEthOracle,
         abi: OracleABI,
       },
       PriceConsumer: {

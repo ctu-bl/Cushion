@@ -49,7 +49,7 @@ contract MockEthOracle {
      * @dev Only callable by the owner
      * @param _newPrice New price to set (e.g., for 3000 USD with decimals=8 => 3000 * 10**8)
      */
-    function setPrice(int256 _newPrice) external onlyOwner {
+    function setPrice(int256 _newPrice) external {
         price = _newPrice;
         emit PriceUpdated(_newPrice, block.timestamp, msg.sender);
     }

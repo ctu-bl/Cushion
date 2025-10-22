@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
-      "address": "0xB2b580ce436E6F77A5713D80887e14788Ef49c9A",
+      "address": "0x1429859428C0aBc9C2C47C8Ee9FBaf82cFA0F20f",
       "abi": [
         {
           "inputs": [
@@ -1382,7 +1382,7 @@ const deployedContracts = {
       ]
     },
     "LoanWrapperRegistry": {
-      "address": "0x66F625B8c4c635af8b74ECe2d7eD0D58b4af3C3d",
+      "address": "0x162A433068F51e18b7d13932F27e66a3f99E6890",
       "abi": [
         {
           "inputs": [
@@ -1670,7 +1670,7 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
-      "address": "0x6C2d83262fF84cBaDb3e416D527403135D757892",
+      "address": "0x9d4454B023096f34B160D6B654540c56A1F81688",
       "abi": [
         {
           "anonymous": false,
@@ -1933,7 +1933,7 @@ const deployedContracts = {
       ]
     },
     "MockPYUSD": {
-      "address": "0xFD6F7A6a5c21A3f503EBaE7a473639974379c351",
+      "address": "0x5eb3Bc0a489C5A8288765d2336659EbCA68FCd00",
       "abi": [
         {
           "anonymous": false,
@@ -2196,7 +2196,7 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
-      "address": "0xa6e99A4ED7498b3cdDCBB61a6A607a4925Faa1B7",
+      "address": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570",
       "abi": [
         {
           "stateMutability": "payable",
@@ -2438,7 +2438,7 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
-      "address": "0x0ed64d01D0B4B655E410EF1441dD677B695639E7",
+      "address": "0x1291Be112d480055DaFd8a610b7d1e203891C274",
       "abi": [
         {
           "inputs": [
@@ -2450,6 +2450,11 @@ const deployedContracts = {
             {
               "internalType": "address",
               "name": "_weth",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "_ethOracle",
               "type": "address"
             }
           ],
@@ -3238,6 +3243,19 @@ const deployedContracts = {
           "name": "dropReserve",
           "outputs": [],
           "stateMutability": "pure",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "ethOracle",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
           "type": "function"
         },
         {
@@ -4402,7 +4420,7 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
-      "address": "0x4bf010f1b9beDA5450a8dD702ED602A104ff65EE",
+      "address": "0x5f3f1dBD7B74C6B46e8c44f98792A1dAf8d69154",
       "abi": [
         {
           "inputs": [
@@ -5026,7 +5044,7 @@ const deployedContracts = {
       ]
     },
     "MockEthOracle": {
-      "address": "0x8bCe54ff8aB45CB075b044AE117b8fD91F9351aB",
+      "address": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D",
       "abi": [
         {
           "inputs": [
@@ -5168,7 +5186,7 @@ const deployedContracts = {
       ]
     },
     "PriceConsumer": {
-      "address": "0x74Cf9087AD26D541930BaC724B7ab21bA8F00a27",
+      "address": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
       "abi": [
         {
           "inputs": [

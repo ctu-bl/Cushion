@@ -15,9 +15,15 @@ interface IMintableERC20 {
     function mint(address to, uint256 amount) external;
 }
 
+interface IMockEthOracle {
+    function latestAnswer() external view returns (int256);
+    function decimals() external view returns (uint8);
+}
+
 abstract contract MockPool is IPool {
     address public immutable usdc;
     address public immutable weth;
+    address public immutable ethOracle;
 
     address public lastDepositAsset;
     uint256 public lastDepositAmount;
@@ -32,7 +38,11 @@ abstract contract MockPool is IPool {
     mapping(address => uint256) public collateralByUser;
     uint256 public userColl;
 
-    constructor(address _usdc, address _weth) { usdc = _usdc; weth = _weth; }
+    constructor(address _usdc, address _weth, address _ethOracle) { 
+        usdc = _usdc; 
+        weth = _weth; 
+        ethOracle = _ethOracle;
+    }
 
     function deposit(address asset, uint256 amount, address onBehalfOf, uint16) external override {
         // move tokens into pool so UI can display real balances
@@ -68,9 +78,22 @@ abstract contract MockPool is IPool {
         uint256 debtUsdc_e6 = debtByUser[user]; // USDC 1e6
         uint256 collateralWeth_e18 = collateralByUser[user]; // WETH 1e18
 
-        // Convert collateral to USDC units (1e6) using fixed price 1 WETH = 2000 USDC
-        // collateralUsd_e6 = collateralWeth_e18 * (2000 * 1e6) / 1e18
-        uint256 collateralUsd_e6 = collateralWeth_e18 * 2_000_000_000 / 1e18;
+        // Convert collateral to USDC units (1e6) using ETH price from oracle
+        int256 ethPriceInt = IMockEthOracle(ethOracle).latestAnswer();
+        uint8 ethPriceDecimals = IMockEthOracle(ethOracle).decimals();
+        uint256 ethPrice = uint256(ethPriceInt);
+        
+        // Normalize ETH price to 1e6 (USDC decimals)
+        // ethPrice is in ethPriceDecimals, we need it in 1e6
+        uint256 ethPriceUsd_e6;
+        if (ethPriceDecimals >= 6) {
+            ethPriceUsd_e6 = ethPrice / (10 ** (ethPriceDecimals - 6));
+        } else {
+            ethPriceUsd_e6 = ethPrice * (10 ** (6 - ethPriceDecimals));
+        }
+        
+        // collateralUsd_e6 = collateralWeth_e18 * ethPriceUsd_e6 / 1e18
+        uint256 collateralUsd_e6 = (collateralWeth_e18 * ethPriceUsd_e6) / 1e18;
 
         // Expose totals (scaled to 1e18 to mimic Aave base format)
         totalDebtBase = debtUsdc_e6 * 1e12; // 1e6 → 1e18
@@ -164,7 +187,7 @@ abstract contract MockPool is IPool {
     function getReservesList() external pure returns (address[] memory) { return new address[](0); }
     function getReserveNormalizedIncome(address) external pure returns (uint256) { return 1e27; }
     function getReserveNormalizedVariableDebt(address) external pure returns (uint256) { return 1e27; }
-    function getReserveAddressById(uint16) external pure returns (address) { return address(0); }
+    function getReserveAddressById(uint16 /* id */) external pure returns (address) { return address(0); }
     function ADDRESSES_PROVIDER() external pure returns (IPoolAddressesProvider) { revert(); }
     function updateBridgeProtocolFee(uint256) external pure {}
     function updateFlashloanPremiums(uint128, uint128) external pure {}
@@ -188,5 +211,5 @@ abstract contract MockPool is IPool {
 }
 
 contract MockPoolImpl is MockPool {
-    constructor(address _usdc, address _weth) MockPool(_usdc, _weth) {}
+    constructor(address _usdc, address _weth, address _ethOracle) MockPool(_usdc, _weth, _ethOracle) {}
 }
