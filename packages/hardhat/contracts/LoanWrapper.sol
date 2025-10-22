@@ -178,7 +178,7 @@ contract LoanWrapper is Ownable {
         IPool pool = IPool(PROVIDER.getPool());
         if (msg.sender != owner()) {
             s_investor = msg.sender;
-            s_investorCollateral = amount * 1e9;
+            s_investorCollateral = amount;
             lockWrapper();
         } else {
             s_initCollateral += amount;

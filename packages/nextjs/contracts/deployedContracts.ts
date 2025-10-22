@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
-      "address": "0xce830DA8667097BB491A70da268b76a081211814",
+      "address": "0xB2b580ce436E6F77A5713D80887e14788Ef49c9A",
       "abi": [
         {
           "inputs": [
@@ -1382,7 +1382,7 @@ const deployedContracts = {
       ]
     },
     "LoanWrapperRegistry": {
-      "address": "0x77AD263Cd578045105FBFC88A477CAd808d39Cf6",
+      "address": "0x66F625B8c4c635af8b74ECe2d7eD0D58b4af3C3d",
       "abi": [
         {
           "inputs": [
@@ -1670,7 +1670,7 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
-      "address": "0x4CF4dd3f71B67a7622ac250f8b10d266Dc5aEbcE",
+      "address": "0x6C2d83262fF84cBaDb3e416D527403135D757892",
       "abi": [
         {
           "anonymous": false,
@@ -1933,7 +1933,7 @@ const deployedContracts = {
       ]
     },
     "MockPYUSD": {
-      "address": "0x2498e8059929e18e2a2cED4e32ef145fa2F4a744",
+      "address": "0xFD6F7A6a5c21A3f503EBaE7a473639974379c351",
       "abi": [
         {
           "anonymous": false,
@@ -2196,7 +2196,7 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
-      "address": "0x447786d977Ea11Ad0600E193b2d07A06EfB53e5F",
+      "address": "0xa6e99A4ED7498b3cdDCBB61a6A607a4925Faa1B7",
       "abi": [
         {
           "stateMutability": "payable",
@@ -2438,7 +2438,7 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
-      "address": "0x245e77E56b1514D77910c9303e4b44dDb44B788c",
+      "address": "0x0ed64d01D0B4B655E410EF1441dD677B695639E7",
       "abi": [
         {
           "inputs": [
@@ -4402,7 +4402,7 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
-      "address": "0xE2b5bDE7e80f89975f7229d78aD9259b2723d11F",
+      "address": "0x4bf010f1b9beDA5450a8dD702ED602A104ff65EE",
       "abi": [
         {
           "inputs": [
@@ -5026,7 +5026,7 @@ const deployedContracts = {
       ]
     },
     "MockEthOracle": {
-      "address": "0x38628490c3043E5D0bbB26d5a0a62fC77342e9d5",
+      "address": "0x8bCe54ff8aB45CB075b044AE117b8fD91F9351aB",
       "abi": [
         {
           "inputs": [
@@ -5168,7 +5168,7 @@ const deployedContracts = {
       ]
     },
     "PriceConsumer": {
-      "address": "0x05bB67cB592C1753425192bF8f34b95ca8649f09",
+      "address": "0x74Cf9087AD26D541930BaC724B7ab21bA8F00a27",
       "abi": [
         {
           "inputs": [

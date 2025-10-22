@@ -29,9 +29,11 @@ contract MockUniswapRouter {
         console.log("MockUniswapRouter: amountIn:", params.amountIn);
         console.log("MockUniswapRouter: recipient:", params.recipient);
         
-        // For testing: return same amount (1:1 swap)
+        // Pricing: 1 WETH = 2000 PYUSD (PYUSD 6 decimals, WETH 18 decimals)
+        // If output is WETH, convert PYUSD(1e6) -> WETH(1e18): amountOut = amountIn * 1e18 / (2000 * 1e6)
+        // If output is PYUSD, convert WETH(1e18) -> PYUSD(1e6): amountOut = amountIn * (2000 * 1e6) / 1e18
+        // Otherwise default 1:1
         amountOut = params.amountIn;
-        console.log("MockUniswapRouter: amountOut:", amountOut);
         
         // Transfer input tokens from caller to this contract
         console.log("MockUniswapRouter: attempting transferFrom from");
@@ -50,8 +52,9 @@ contract MockUniswapRouter {
             (bool hasDeposit, ) = params.tokenOut.call(abi.encodeWithSignature("deposit()"));
             if (hasDeposit) {
                 console.log("MockUniswapRouter: output is WETH, minting WETH tokens");
-                console.log("MockUniswapRouter: available ETH balance:", address(this).balance);
-                console.log("MockUniswapRouter: amount to mint:", amountOut);
+                // Convert PYUSD(1e6) -> WETH(1e18) using 1 WETH = 2000 PYUSD
+                amountOut = (params.amountIn * 1e12) / 2000; // = amountIn * 1e18 / (2000 * 1e6)
+                console.log("MockUniswapRouter: computed WETH amountOut:", amountOut);
                 
                 // For testing purposes, just mint WETH tokens without sending ETH
                 // In real scenario, we would send ETH to WETH contract first
@@ -67,7 +70,11 @@ contract MockUniswapRouter {
                     console.log("MockUniswapRouter: direct transfer completed");
                 }
             } else {
-                // For other tokens, just mint them
+                // If output is PYUSD, assume input is WETH and compute PYUSD amount
+                // amountOut = amountIn * (2000 * 1e6) / 1e18 = amountIn * 2_000_000_000 / 1e18
+                amountOut = (params.amountIn * 2_000_000_000) / 1e18;
+                console.log("MockUniswapRouter: computed PYUSD amountOut:", amountOut);
+
                 (bool mintSuccess, ) = params.tokenOut.call(
                     abi.encodeWithSignature("mint(address,uint256)", params.recipient, amountOut)
                 );
