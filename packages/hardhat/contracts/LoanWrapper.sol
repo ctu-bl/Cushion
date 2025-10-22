@@ -249,11 +249,7 @@ contract LoanWrapper is Ownable {
      * @param userAmount Amount of user collateral to withdraw
      * @dev Only callable by Vault
      */
-<<<<<<< HEAD
     function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external onlyOwnerOrVault {
-=======
-    function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external payable onlyOwnerOrVault {
->>>>>>> a1e3f33 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
         // --Checks--
         
         uint256 totalAmount = investorAmount + userAmount;
@@ -294,7 +290,6 @@ contract LoanWrapper is Ownable {
         }
 
         // ---- Interactions (unwrap and payout) ----
-<<<<<<< HEAD
         console.log("LoanWrapper: withdrawing WETH amount:", totalAmount);
         console.log("LoanWrapper: WETH balance before withdraw:", IERC20(COL_TOKEN_ADDR).balanceOf(address(this)));
         IWETH9(COL_TOKEN_ADDR).withdraw(totalAmount);
@@ -303,19 +298,11 @@ contract LoanWrapper is Ownable {
         (bool success, ) = payable(msg.sender).call{value: totalAmount}("");
         console.log("LoanWrapper: ETH send success:", success);
         console.log("LoanWrapper: ETH balance after send:", address(this).balance);
-=======
-        IWETH9(COL_TOKEN_ADDR).withdraw(totalAmount);
-        (bool success, ) = payable(msg.sender).call{value: totalAmount}("");
->>>>>>> a1e3f33 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
         if (!success) revert LoanWrapper__WithdrawFailed();
 
         emit CollateralDecreased(address(this), msg.sender, totalAmount);
     }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> a1e3f33 (withdawfrom loan is working but there is an error in sending pyusd back to vault)
     /**
      * @notice Increases the debt of the owner. HF should decrease and shouldn't
      * go below the threshold

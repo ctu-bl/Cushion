@@ -20,7 +20,7 @@ interface ILoanWrapper {
     function getTotalDebtValue() external view returns (uint256);
     function increaseCollateral(uint256 amount) external payable;
     function decreaseCollateral(uint256 amount) external payable;
-    function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external payable;
+    function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external;
     function getOwnerCollateralValue() external view returns (uint256);
     function getInvestorCollateralValue() external view returns (uint256);
     function repayLoan() external;
@@ -276,19 +276,23 @@ contract Vault is ERC4626, Ownable {
         ILoanWrapper(loan).decreaseCollateralForVault(investorCollateral, userCollateralToWithdraw);
 
 
+     
         uint256 totalEthToWithdraw = investorCollateral + userCollateralToWithdraw;
+        console.log("Vault: actual ETH balance before swap:", address(this).balance);
         
         // Convert received ETH to PYUSD and deposit to Vault
         uint256 pyusdReceived = _swapEthToPyUsd(totalEthToWithdraw);
-        console.log("Vault: withdrawFromLoan - pyusdReceived:", pyusdReceived);
+        
+        // No need to transfer - PYUSD are already minted to Vault address
+        // Just update the internal accounting to reflect the new assets
         
         // Update accounting
-        totalInjectedAssets -= injected.amountPyUsd;
+        //totalInjectedAssets -= injected.amountPyUsd;
+       // totalInjectedAssets += pyusdReceived; // Add back the new PYUSD received
         delete injectedAssets[loan];
         
-        emit CapitalWithdrawn(loan, totalEthToWithdraw);
+        //emit CapitalWithdrawn(loan, totalEthToWithdraw);
         console.log("Vault: withdrawFromLoan completed successfully");
-        console.log("Vault: PYUSD deposited to Vault:", pyusdReceived);
     }
 
     /**

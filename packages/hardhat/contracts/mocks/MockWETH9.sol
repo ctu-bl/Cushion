@@ -40,6 +40,8 @@ contract MockWETH9 is IWETH9Like {
         
         console.log("MockWETH9: attempting to send ETH to", msg.sender, "amount:", amount);
         console.log("MockWETH9: available ETH balance:", address(this).balance);
+        console.log("MockWETH9: required amount:", amount);
+        console.log("MockWETH9: sufficient ETH?", address(this).balance >= amount);
         
         // Send the exact requested amount, not all available ETH
         (bool success, ) = payable(msg.sender).call{value: amount}("");

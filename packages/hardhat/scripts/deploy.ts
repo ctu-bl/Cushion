@@ -51,12 +51,12 @@ async function main() {
 
   // Seed MockWETH9 with ETH
   console.log("\n💰 Seeding MockWETH9 with ETH...");
-  const wethEthAmount = ethersLib.utils.parseEther("20"); // 20 ETH (reduced)
+  const wethEthAmount = ethersLib.utils.parseEther("200"); // 200 ETH (increased for pool operations)
   await deployer.sendTransaction({
     to: mockWETH.address,
     value: wethEthAmount
   });
-  console.log("✅ MockWETH9 seeded with 20 ETH");
+  console.log("✅ MockWETH9 seeded with 200 ETH");
 
   // Deploy MockPoolImpl (constructor expects USDC, WETH, and ETH Oracle)
   const MockPoolImplArtifact = await hre.artifacts.readArtifact("MockPoolImpl");
