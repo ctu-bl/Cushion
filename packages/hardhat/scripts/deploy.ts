@@ -148,13 +148,16 @@ async function main() {
   const vaultAddress = vault.address;
   console.log("✅ Vault deployed to:", vaultAddress);
 
-  // ========== Seed Vault with PYUSD ==========
-  console.log("\n💰 Seeding Vault with PYUSD...");
-  await mockPYUSD.mint(vaultAddress, ethersLib.BigNumber.from(1000000n * 10n ** 6n)); // 1M PYUSD
-  console.log("✅ Vault seeded with 1M PYUSD");
+  // ========== Vault starts empty ==========
+  console.log("\n💰 Vault starts empty - no initial PYUSD seeding");
+
+  // ========== Seed Deployer with PYUSD for testing ==========
+  console.log("\n💰 Seeding Deployer with PYUSD for testing...");
+  await mockPYUSD.mint(deployer.address, ethersLib.BigNumber.from(10000n * 10n ** 6n)); // 10K PYUSD
+  console.log("✅ Deployer seeded with 10K PYUSD for testing");
 
   // ========== Seed Vault with ETH ==========
-  // Vault will receive ETH from WETH withdraw operations, no need to seed with ETH
+  //  will receive ETH from WETH withdraw operations, no need to seed with ETH
   console.log("✅ Vault will receive ETH from WETH operations");
 
   // ========== Deploy LoanWrapperRegistry ==========

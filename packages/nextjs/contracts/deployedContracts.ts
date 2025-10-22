@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
-      "address": "0x25A1DF485cFBb93117f12fc673D87D1cddEb845a",
+      "address": "0x0c03eCB91Cb50835e560a7D52190EB1a5ffba797",
       "abi": [
         {
           "inputs": [
@@ -327,6 +327,11 @@ const deployedContracts = {
         },
         {
           "inputs": [],
+          "name": "Vault__PrincipalTooLow",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "Vault__SwapAdapterNotSet",
           "type": "error"
         },
@@ -372,7 +377,7 @@ const deployedContracts = {
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "amount",
+              "name": "amountEthSent",
               "type": "uint256"
             }
           ],
@@ -391,49 +396,11 @@ const deployedContracts = {
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "CapitalInjectedFromLiquidProvider",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "loan",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
+              "name": "amountEthReceived",
               "type": "uint256"
             }
           ],
           "name": "CapitalWithdrawn",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "loan",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "CapitalWithdrawnFromLiquidProvider",
           "type": "event"
         },
         {
@@ -465,6 +432,37 @@ const deployedContracts = {
             }
           ],
           "name": "Deposit",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "assets",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "shares",
+              "type": "uint256"
+            }
+          ],
+          "name": "DepositedPrincipal",
           "type": "event"
         },
         {
@@ -625,6 +623,37 @@ const deployedContracts = {
           "type": "event"
         },
         {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "assets",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "sharesBurned",
+              "type": "uint256"
+            }
+          ],
+          "name": "WithdrawnAmount",
+          "type": "event"
+        },
+        {
           "inputs": [],
           "name": "ETH_USD_FEED",
           "outputs": [
@@ -777,6 +806,19 @@ const deployedContracts = {
           "type": "function"
         },
         {
+          "inputs": [],
+          "name": "availableAssets",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [
             {
               "internalType": "address",
@@ -785,6 +827,25 @@ const deployedContracts = {
             }
           ],
           "name": "balanceOf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "balanceOfVault",
           "outputs": [
             {
               "internalType": "uint256",
@@ -883,6 +944,30 @@ const deployedContracts = {
             {
               "internalType": "uint256",
               "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            }
+          ],
+          "name": "depositFor",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "shares",
               "type": "uint256"
             }
           ],
@@ -1175,6 +1260,25 @@ const deployedContracts = {
         {
           "inputs": [
             {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            }
+          ],
+          "name": "principalOf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
               "internalType": "uint256",
               "name": "shares",
               "type": "uint256"
@@ -1237,6 +1341,19 @@ const deployedContracts = {
         {
           "inputs": [],
           "name": "totalInjectedAssets",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "totalPrincipal",
           "outputs": [
             {
               "internalType": "uint256",
@@ -1336,6 +1453,25 @@ const deployedContracts = {
         {
           "inputs": [
             {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "userPrincipal",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
               "internalType": "uint256",
               "name": "assets",
               "type": "uint256"
@@ -1365,6 +1501,30 @@ const deployedContracts = {
         {
           "inputs": [
             {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            }
+          ],
+          "name": "withdrawAmount",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "sharesBurned",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
               "internalType": "address",
               "name": "loan",
               "type": "address"
@@ -1376,13 +1536,37 @@ const deployedContracts = {
           "type": "function"
         },
         {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "shares",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            }
+          ],
+          "name": "withdrawFromVault",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "assets",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
           "stateMutability": "payable",
           "type": "receive"
         }
       ]
     },
     "LoanWrapperRegistry": {
-      "address": "0xF45B1CdbA9AACE2e9bbE80bf376CE816bb7E73FB",
+      "address": "0xb04CB6c52E73CF3e2753776030CE85a36549c9C2",
       "abi": [
         {
           "inputs": [
@@ -1670,7 +1854,7 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
-      "address": "0x773330693cb7d5D233348E25809770A32483A940",
+      "address": "0x7036124464A2d2447516309169322c8498ac51e3",
       "abi": [
         {
           "anonymous": false,
@@ -1933,7 +2117,7 @@ const deployedContracts = {
       ]
     },
     "MockPYUSD": {
-      "address": "0x52173b6ac069619c206b9A0e75609fC92860AB2A",
+      "address": "0xeE1eb820BeeCED56657bA74fa8D70748D7A6756C",
       "abi": [
         {
           "anonymous": false,
@@ -2196,7 +2380,7 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
-      "address": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+      "address": "0x5c932424AcBfab036969b3B9D94bA9eCbae7565D",
       "abi": [
         {
           "stateMutability": "payable",
@@ -2438,7 +2622,7 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
-      "address": "0xd977422c9eE9B646f64A4C4389a6C98ad356d8C4",
+      "address": "0x0724F18B2aA7D6413D3fDcF6c0c27458a8170Dd9",
       "abi": [
         {
           "inputs": [
@@ -4420,7 +4604,7 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
-      "address": "0x1eB5C49630E08e95Ba7f139BcF4B9BA171C9a8C7",
+      "address": "0xE7FF84Df24A9a252B6E8A5BB093aC52B1d8bEEdf",
       "abi": [
         {
           "inputs": [
@@ -5044,7 +5228,7 @@ const deployedContracts = {
       ]
     },
     "MockEthOracle": {
-      "address": "0x532802f2F9E0e3EE9d5Ba70C35E1F43C0498772D",
+      "address": "0x3949c97925e5Aa13e34ddb18EAbf0B70ABB0C7d4",
       "abi": [
         {
           "inputs": [
@@ -5186,7 +5370,7 @@ const deployedContracts = {
       ]
     },
     "PriceConsumer": {
-      "address": "0x5A569Ad19272Afa97103fD4DbadF33B2FcbaA175",
+      "address": "0xa195ACcEB1945163160CD5703Ed43E4f78176a54",
       "abi": [
         {
           "inputs": [

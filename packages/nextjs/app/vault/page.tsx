@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
-import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useAccount, useWaitForTransactionReceipt } from "wagmi";
+import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 export default function VaultPage() {
   const { isConnected, address } = useAccount();
@@ -28,49 +28,34 @@ export default function VaultPage() {
   const PYUSD_ADDRESS = mockPYUSDInfo?.address;
   const VAULT_ADDRESS = vaultInfo?.address;
 
-  const { writeContractAsync } = useWriteContract();
+  const { writeContractAsync } = useScaffoldWriteContract("Vault");
+  const { writeContractAsync: writePyusdContractAsync } = useScaffoldWriteContract("MockPYUSD");
 
   // Read PYUSD balance
-  const { data: pyusdBalance, refetch: refetchPyusdBalance } = useReadContract({
-    address: PYUSD_ADDRESS,
-    abi: mockPYUSDInfo?.abi,
+  const { data: pyusdBalance, refetch: refetchPyusdBalance } = useScaffoldReadContract({
+    contractName: "MockPYUSD",
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && !!PYUSD_ADDRESS,
-    },
   });
 
   // Read Vault total assets
-  const { data: vaultTotalAssets, refetch: refetchVaultTotalAssets } = useReadContract({
-    address: VAULT_ADDRESS,
-    abi: vaultInfo?.abi,
+  const { data: vaultTotalAssets, refetch: refetchVaultTotalAssets } = useScaffoldReadContract({
+    contractName: "Vault",
     functionName: "totalAssets",
-    query: {
-      enabled: !!VAULT_ADDRESS,
-    },
   });
 
   // Read user's Vault shares
-  const { data: userVaultShares, refetch: refetchUserVaultShares } = useReadContract({
-    address: VAULT_ADDRESS,
-    abi: vaultInfo?.abi,
+  const { data: userVaultShares, refetch: refetchUserVaultShares } = useScaffoldReadContract({
+    contractName: "Vault",
     functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && !!VAULT_ADDRESS,
-    },
+    args: [address],
   });
 
   // Convert user's shares to assets
-  const { data: userVaultAssets, refetch: refetchUserVaultAssets } = useReadContract({
-    address: VAULT_ADDRESS,
-    abi: vaultInfo?.abi,
+  const { data: userVaultAssets, refetch: refetchUserVaultAssets } = useScaffoldReadContract({
+    contractName: "Vault",
     functionName: "convertToAssets",
     args: userVaultShares ? [userVaultShares] : undefined,
-    query: {
-      enabled: !!userVaultShares && !!VAULT_ADDRESS,
-    },
   });
 
   // Format PYUSD balance (6 decimals)
@@ -86,6 +71,7 @@ export default function VaultPage() {
   const userBalance = formatPyusdBalance(pyusdBalance);
   const totalVaultAmount = formatPyusdBalance(vaultTotalAssets);
   const userVaultBalance = formatPyusdBalance(userVaultAssets);
+  
 
   // Function to refresh all balances
   const refreshAllBalances = async () => {
@@ -135,7 +121,10 @@ export default function VaultPage() {
   // Auto-hide deposit success message after 3 seconds and refresh balances
   useEffect(() => {
     if (isDepositSuccess) {
+      // Immediate refresh
       refreshAllBalances();
+      // Additional refresh after 1 second to ensure data is updated
+      setTimeout(() => refreshAllBalances(), 1000);
       const timer = setTimeout(() => {
         setDepositTxHash(undefined);
         setDepositAmount("");
@@ -157,7 +146,10 @@ export default function VaultPage() {
   // Auto-hide withdraw success message after 3 seconds and refresh balances
   useEffect(() => {
     if (isWithdrawSuccess) {
+      // Immediate refresh
       refreshAllBalances();
+      // Additional refresh after 1 second to ensure data is updated
+      setTimeout(() => refreshAllBalances(), 1000);
       const timer = setTimeout(() => {
         setWithdrawTxHash(undefined);
         setWithdrawAmount("");
@@ -181,9 +173,7 @@ export default function VaultPage() {
       setDepositError(undefined);
       const amount = parseFloat(depositAmount) * 1000000; // Convert to 6 decimals
       const hash = await writeContractAsync({
-        address: VAULT_ADDRESS,
-        abi: vaultInfo?.abi,
-        functionName: "deposit",
+        functionName: "depositFor",
         args: [BigInt(amount), address!],
       });
       setDepositTxHash(hash);
@@ -199,11 +189,11 @@ export default function VaultPage() {
     try {
       setWithdrawError(undefined);
       const amount = parseFloat(withdrawAmount) * 1000000; // Convert to 6 decimals
+      
+      // Use withdrawAmount function from Vault contract
       const hash = await writeContractAsync({
-        address: VAULT_ADDRESS,
-        abi: vaultInfo?.abi,
-        functionName: "withdraw",
-        args: [BigInt(amount), address!, address!],
+        functionName: "withdrawAmount",
+        args: [BigInt(amount), address!],
       });
       setWithdrawTxHash(hash);
     setShowWithdrawModal(false);
@@ -218,9 +208,7 @@ export default function VaultPage() {
     try {
       setApproveError(undefined);
       const amount = parseFloat(approveAmount) * 1000000; // Convert to 6 decimals
-      const hash = await writeContractAsync({
-        address: PYUSD_ADDRESS,
-        abi: mockPYUSDInfo?.abi,
+      const hash = await writePyusdContractAsync({
         functionName: "approve",
         args: [VAULT_ADDRESS, BigInt(amount)],
       });
@@ -574,8 +562,8 @@ export default function VaultPage() {
               </label>
 
               <div className="text-sm text-base-content/60 mb-4">
-                <div>Available: {userBalance} pyUSD</div>
-                <div>In Vault: {userVaultBalance} pyUSD</div>
+                <div>Available: {userVaultBalance} pyUSD</div>
+                <div>In Wallet: {userBalance} pyUSD</div>
               </div>
 
               <div className="flex justify-end gap-3">
@@ -663,13 +651,13 @@ export default function VaultPage() {
                   className="input input-bordered w-full text-lg bg-base-200 text-base-content"
                   step="0.01"
                   min="0"
-                  max={userBalance.replace(/,/g, "")}
+                  max={userVaultBalance.replace(/,/g, "")}
                 />
               </label>
 
               <div className="text-sm text-base-content/60 mb-4">
-                <div>Available: {userBalance} pyUSD</div>
-                <div>In Vault: {userVaultBalance} pyUSD</div>
+                <div>Available: {userVaultBalance} pyUSD</div>
+                <div>In Wallet: {userBalance} pyUSD</div>
               </div>
 
               <div className="flex justify-end gap-3">
@@ -685,12 +673,7 @@ export default function VaultPage() {
                 <button
                   className="btn btn-primary"
                   onClick={handleWithdraw}
-                  disabled={
-                    !withdrawAmount ||
-                    parseFloat(withdrawAmount) <= 0 ||
-                    parseFloat(withdrawAmount) > parseFloat(userBalance.replace(/,/g, "")) ||
-                    isWithdrawLoading
-                  }
+                
                 >
                   {isWithdrawLoading ? "Withdrawing..." : "Withdraw"}
                 </button>
