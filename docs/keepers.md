@@ -33,56 +33,54 @@ This project implements an **autonomous loan management bot** that:
 
 Below is a simplified diagram showing how the bot operates:
 
-                     ┌──────────────────────────────────────────────┐
-                     │                monitor.py                    │
-                     │----------------------------------------------│
-                     │  Controls simulation & loan monitoring loops │
-                     └──────────────────────────────────────────────┘
-                                      │
-                    ┌─────────────────┴─────────────────┐
-                    │                                   │
-        ┌────────────────────────┐          ┌────────────────────────┐
-        │  Price Simulation Loop │          │   Loan Monitoring Loop │
-        │  (simulate_price)      │          │   (monitoring)         │
-        └────────────────────────┘          └────────────────────────┘
-                    │                                   │
-   ┌────────────────────────────────┐       ┌──────────────────────────────┐
-   │ Randomly adjust ETH price      │       │ Get all active loan wrappers │
-   │ by ±VOLATILITY percent         │       │ from LoanWrapperRegistry     │
-   └────────────────┬───────────────┘       └───────────┬──────────────────┘
-                    │                                   │
-        Set new price on-chain via           For each wrapper:
-          MockEthOracle.setPrice()                 │
-                    │                              │
-                    │                       ┌─────────────────────────────────────┐
-                    │                       │ Retrieve HF value (getHF)           │
-                    │                       │ Check if loan is locked (isLocked)  │
-                    │                       └──────┬──────────────────────────────┘
-                    │                              │
-                    │                              ▼
-                    │                   ┌────────────────────────────────────┐
-                    │                   │ Decision Logic:                    │
-                    │                   │                                    │
-                    │                   │ If HF < HF_INJECT_THRESHOLD:       │
-                    │                   │   → inject or liquidate loan       │
-                    │                   │                                    │
-                    │                   │ Else if HF < HF_LIQUIDATE_THRESHOLD│
-                    │                   │   → liquidate (if locked)          │
-                    │                   │                                    │
-                    │                   │ Else if HF < HF_WITHDRAW_THRESHOLD │
-                    │                   │   → do nothing                     │
-                    │                   │                                    │
-                    │                   │ Else if HF ≥ HF_WITHDRAW_THRESHOLD │
-                    │                   │   → withdraw from loan (if locked) │
-                    │                   └────────────────────────────────────┘
-                    │
-                    │
-                    ▼
-    ┌────────────────────────────────────────────────────┐
-    │ All transactions (inject, liquidate, withdraw)     │
-    │ are built, signed locally, and sent via Web3.py.   │
-    │ Each tx is confirmed and logged to console.        │
-    └────────────────────────────────────────────────────┘
+                         ┌──────────────────────────────────────────────┐
+                         │                  monitor.py                   │
+                         │──────────────────────────────────────────────│
+                         │  Controls simulation & loan monitoring loops │
+                         └──────────────────────────────────────────────┘
+                                          │
+                      ┌───────────────────┴───────────────────┐
+                      │                                       │
+          ┌────────────────────────────┐          ┌────────────────────────────┐
+          │    Price Simulation Loop   │          │     Loan Monitoring Loop   │
+          │       (simulate_price)     │          │        (monitoring)        │
+          └────────────────────────────┘          └────────────────────────────┘
+                      │                                       │
+    ┌─────────────────┴──────────────────┐        ┌───────────┴───────────────────┐
+    │ Randomly adjust ETH price by       │        │ Get all active loan wrappers  │
+    │ ±VOLATILITY percent                │        │ from LoanWrapperRegistry      │
+    └─────────────────┬──────────────────┘        └───────────┬───────────────────┘
+                      │                                       │
+     Set new price on-chain via                   For each wrapper:
+       MockEthOracle.setPrice()                          │
+                      │                                  │
+                      │                          ┌───────┴────────────────────────────┐
+                      │                          │ Retrieve HF value (getHF)          │
+                      │                          │ Check if loan is locked (isLocked) │
+                      │                          └───────┬────────────────────────────┘
+                      │                                  │
+                      │                                  ▼
+                      │                 ┌────────────────────────────────────────────┐
+                      │                 │                Decision Logic               │
+                      │                 │--------------------------------------------│
+                      │                 │ If HF < HF_INJECT_THRESHOLD:               │
+                      │                 │     → inject or liquidate loan             │
+                      │                 │                                            │
+                      │                 │ Else if HF < HF_LIQUIDATE_THRESHOLD:       │
+                      │                 │     → liquidate (if locked)                │
+                      │                 │                                            │
+                      │                 │ Else if HF < HF_WITHDRAW_THRESHOLD:        │
+                      │                 │     → do nothing                           │
+                      │                 │                                            │
+                      │                 │ Else if HF ≥ HF_WITHDRAW_THRESHOLD:        │
+                      │                 │     → withdraw from loan (if locked)       │
+                      │                 └────────────────────────────────────────────┘
+                      │
+                      ▼
+    ┌────────────────────────────────────────────────────────────────────────────┐
+    │ All transactions (inject, liquidate, withdraw) are built, signed locally,  │
+    │ and sent via Web3.py. Each transaction is confirmed and logged to console. │
+    └────────────────────────────────────────────────────────────────────────────┘
 
 
 ---
