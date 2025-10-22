@@ -34,7 +34,7 @@ This project implements an **autonomous loan management bot** that:
 Below is a simplified diagram showing how the bot operates:
 
                          ┌──────────────────────────────────────────────┐
-                         │                  monitor.py                   │
+                         │                  monitor.py                  │
                          │──────────────────────────────────────────────│
                          │  Controls simulation & loan monitoring loops │
                          └──────────────────────────────────────────────┘
@@ -61,7 +61,7 @@ Below is a simplified diagram showing how the bot operates:
                       │                                  │
                       │                                  ▼
                       │                 ┌────────────────────────────────────────────┐
-                      │                 │                Decision Logic               │
+                      │                 │                Decision Logic              │
                       │                 │--------------------------------------------│
                       │                 │ If HF < HF_INJECT_THRESHOLD:               │
                       │                 │     → inject or liquidate loan             │
