@@ -387,6 +387,11 @@ contract Vault is ERC4626, Ownable {
         delete injectedAssets[loan];
 
         console.log("Emitting LoanLiquidated event");
+
+        uint256 pyusdFromEth = _swapEthToPyUsd(address(this).balance);
+        
+        totalInjectedAssets += pyusdFromEth;
+
         emit LoanLiquidated(loan, amountToLiquidatePyUsd);
         
         console.log("=== LIQUIDATE FUNCTION END ===");
