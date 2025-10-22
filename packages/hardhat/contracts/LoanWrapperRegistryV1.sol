@@ -92,17 +92,12 @@ contract LoanWrapperRegistry {
         IPool pool = IPool(provider.getPool());
 
         // 2) ETH -> WETH (WETH se připíše registru, protože on posílá ETH)
-        uint256 depositAmount = (msg.value * 97) / 100;
-        uint256 fee = msg.value - depositAmount;
-        IWETH9(WETH).deposit{value: depositAmount}();
+        IWETH9(WETH).deposit{value: msg.value}();
 
         // 3) deposit WETH do Aave NA ÚČET WRAPPERU (onBehalfOf = wrapper)
-        IERC20(WETH).approve(address(pool), depositAmount);
-        pool.deposit(WETH, depositAmount, wrapper, 0);
-        (bool success, ) = payable(vault).call{value: fee}("");
-        if (!success) {
-            revert LoanWrapperRegistry__TransferFailed();
-        }
+        IERC20(WETH).approve(address(pool), msg.value);
+        pool.deposit(WETH, msg.value, wrapper, 0);
+
         // 4) borrow USDC NA ÚČET WRAPPERU (onBehalfOf = wrapper)
         //    Pozor: underlying USDC se po borrowu pošle volajícímu (registru),
         //    proto ho hned přepošleme borrowerovi.
@@ -117,7 +112,7 @@ contract LoanWrapperRegistry {
 
     function getHF(address wrapper) external view returns (uint256 hf) {
         require(wrapper != address(0), LoanWrapperRegistry__InvalidWrapper());
-        (,,,,,hf) = IPool(provider.getPool()).getUserAccountData(wrapper);
+        hf = LoanWrapper(payable(wrapper)).calculatedHF();
     }
 
     function checkHF(address wrapper) external view returns (bool isHealthy) {

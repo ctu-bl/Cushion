@@ -26,6 +26,13 @@ async function main() {
   await mockUSDC.deployTransaction.wait();
   console.log("✅ Mock USDC deployed to:", mockUSDC.address);
 
+  // Deploy MockPYUSD
+  const MockPYUSDArtifact = await hre.artifacts.readArtifact("MockPYUSD");
+  const MockPYUSDFactory = new ethersLib.ContractFactory(MockPYUSDArtifact.abi, MockPYUSDArtifact.bytecode, deployer);
+  const mockPYUSD = await MockPYUSDFactory.deploy();
+  await mockPYUSD.deployTransaction.wait();
+  console.log("✅ Mock PYUSD deployed to:", mockPYUSD.address);
+
   // Deploy MockWETH9
   const MockWETH9Artifact = await hre.artifacts.readArtifact("MockWETH9");
   const MockWETH9Factory = new ethersLib.ContractFactory(MockWETH9Artifact.abi, MockWETH9Artifact.bytecode, deployer);
@@ -33,10 +40,28 @@ async function main() {
   await mockWETH.deployTransaction.wait();
   console.log("✅ Mock WETH deployed to:", mockWETH.address);
 
-  // Deploy MockPoolImpl (constructor expects USDC and WETH)
+  // Deploy MockEthOracle
+  const MockEthOracleArtifact = await hre.artifacts.readArtifact("MockEthOracle");
+  const MockEthOracleFactory = new ethersLib.ContractFactory(MockEthOracleArtifact.abi, MockEthOracleArtifact.bytecode, deployer);
+  // Initial price: 2000 USD with 8 decimals (like Chainlink)
+  const initialEthPrice = ethersLib.BigNumber.from("200000000000"); // 2000 * 10^8
+  const mockEthOracle = await MockEthOracleFactory.deploy(initialEthPrice, 8);
+  await mockEthOracle.deployTransaction.wait();
+  console.log("✅ Mock ETH Oracle deployed to:", mockEthOracle.address);
+
+  // Seed MockWETH9 with ETH
+  console.log("\n💰 Seeding MockWETH9 with ETH...");
+  const wethEthAmount = ethersLib.utils.parseEther("200"); // 200 ETH (increased for pool operations)
+  await deployer.sendTransaction({
+    to: mockWETH.address,
+    value: wethEthAmount
+  });
+  console.log("✅ MockWETH9 seeded with 200 ETH");
+
+  // Deploy MockPoolImpl (constructor expects USDC, WETH, and ETH Oracle)
   const MockPoolImplArtifact = await hre.artifacts.readArtifact("MockPoolImpl");
   const MockPoolImplFactory = new ethersLib.ContractFactory(MockPoolImplArtifact.abi, MockPoolImplArtifact.bytecode, deployer);
-  const mockPool = await MockPoolImplFactory.deploy(mockUSDC.address, mockWETH.address);
+  const mockPool = await MockPoolImplFactory.deploy(mockUSDC.address, mockWETH.address, mockEthOracle.address);
   await mockPool.deployTransaction.wait();
   console.log("✅ Mock Pool deployed to:", mockPool.address);
 
@@ -59,6 +84,48 @@ async function main() {
   await mockWETH.transfer(mockPool.address, ethersLib.BigNumber.from(100n * 10n ** 18n));
   console.log("✅ Pool liquidity seeded (USDC + WETH)");
 
+  // ========== Deploy Mock Chainlink Oracles ==========
+  console.log("\n📈 Deploying Mock Chainlink Oracles...");
+  const MockChainlinkOracleArtifact = await hre.artifacts.readArtifact("MockChainlinkOracle");
+  const MockChainlinkOracleFactory = new ethersLib.ContractFactory(MockChainlinkOracleArtifact.abi, MockChainlinkOracleArtifact.bytecode, deployer);
+  
+  // ETH/USD price feed (3000 USD per ETH)
+  const mockEthUsdFeed = await MockChainlinkOracleFactory.deploy(3000n * 10n ** 8n, 8);
+  await mockEthUsdFeed.deployTransaction.wait();
+  console.log("✅ Mock ETH/USD Feed deployed to:", mockEthUsdFeed.address);
+  
+  // PYUSD/USD price feed (1 USD per PYUSD)
+  const mockPyusdUsdFeed = await MockChainlinkOracleFactory.deploy(1n * 10n ** 8n, 8);
+  await mockPyusdUsdFeed.deployTransaction.wait();
+  console.log("✅ Mock PYUSD/USD Feed deployed to:", mockPyusdUsdFeed.address);
+
+  // ========== Deploy Mock Uniswap Router ==========
+  console.log("\n🔄 Deploying Mock Uniswap Router...");
+  const MockUniswapRouterArtifact = await hre.artifacts.readArtifact("MockUniswapRouter");
+  const MockUniswapRouterFactory = new ethersLib.ContractFactory(MockUniswapRouterArtifact.abi, MockUniswapRouterArtifact.bytecode, deployer);
+  const mockSwapRouter = await MockUniswapRouterFactory.deploy(mockEthOracle.address);
+  await mockSwapRouter.deployTransaction.wait();
+  console.log("✅ Mock Uniswap Router deployed to:", mockSwapRouter.address);
+
+  // ========== Seed Mock Router with WETH ==========
+  console.log("\n💰 Seeding Mock Router with WETH...");
+  await mockWETH.mint(mockSwapRouter.address, ethersLib.BigNumber.from(1000n * 10n ** 18n)); // 1000 WETH
+  console.log("✅ Mock Router seeded with 1000 WETH");
+
+  // ========== Seed Mock Router with ETH ==========
+  console.log("\n💰 Seeding Mock Router with ETH...");
+  const routerEthAmount = ethersLib.utils.parseEther("10"); // 10 ETH (much smaller amount)
+  try {
+    await deployer.sendTransaction({
+      to: mockSwapRouter.address,
+      value: routerEthAmount
+    });
+    console.log("✅ Mock Router seeded with 10 ETH");
+  } catch (error: any) {
+    console.log("⚠️ Failed to seed Mock Router with ETH, continuing without it");
+    console.log("Error:", error.message);
+  }
+
   // ========== Deploy Vault ==========
   console.log("\n📦 Deploying Vault...");
   const VaultArtifact = await hre.artifacts.readArtifact("Vault");
@@ -68,10 +135,26 @@ async function main() {
     deployer
   );
   
-  const vault = await VaultFactory.deploy("Cushion Vault", "cvPYUSD");
+  const vault = await VaultFactory.deploy(
+    "Cushion Vault", 
+    "cvPYUSD", 
+    mockPYUSD.address,
+    mockWETH.address,
+    mockSwapRouter.address,
+    mockEthUsdFeed.address,
+    mockPyusdUsdFeed.address
+  );
   await vault.deployTransaction.wait();
   const vaultAddress = vault.address;
   console.log("✅ Vault deployed to:", vaultAddress);
+
+  // ========== Seed Vault with PYUSD ==========
+  // Skipping PYUSD seeding - vault will start empty
+  console.log("✅ Vault will start empty (no PYUSD seeding)");
+
+  // ========== Seed Vault with ETH ==========
+  // Vault will receive ETH from WETH withdraw operations, no need to seed with ETH
+  console.log("✅ Vault will receive ETH from WETH operations");
 
   // ========== Deploy LoanWrapperRegistry ==========
   console.log("\n📦 Deploying LoanWrapperRegistry...");
@@ -126,21 +209,30 @@ async function main() {
   console.log("  LoanWrapperRegistry:    ", registryAddress);
   console.log("\n📋 Mock contracts:");
   console.log("  Mock USDC:              ", mockUSDC.address);
+  console.log("  Mock PYUSD:             ", mockPYUSD.address);
   console.log("  Mock WETH:              ", mockWETH.address);
   console.log("  Mock Pool:              ", mockPool.address);
   console.log("  Mock Provider:          ", mockProvider.address);
   console.log("  Mock ETH price:         ", oracleAddress);
   console.log("  PriceConsumer:          ", consumerAddress);
+  console.log("  Mock ETH/USD Feed:      ", mockEthUsdFeed.address);
+  console.log("  Mock PYUSD/USD Feed:    ", mockPyusdUsdFeed.address);
+  console.log("  Mock Uniswap Router:    ", mockSwapRouter.address);
   console.log("\n💡 LoanWrapper contracts will be deployed dynamically when wrapping loans");
 
   // Generate deployedContracts.ts for frontend
   const mockAddresses = {
     mockUSDC: mockUSDC.address,
+    mockPYUSD: mockPYUSD.address,
     mockWETH: mockWETH.address,
     mockPool: mockPool.address,
     mockProvider: mockProvider.address,
     oracleAddress: oracleAddress,
     consumerAddress: consumerAddress,
+    mockEthUsdFeed: mockEthUsdFeed.address,
+    mockPyusdUsdFeed: mockPyusdUsdFeed.address,
+    mockSwapRouter: mockSwapRouter.address,
+    mockEthOracle: mockEthOracle.address,
   };
   await generateDeployedContracts(vaultAddress, registryAddress, mockAddresses);
 }
@@ -177,6 +269,10 @@ async function generateDeployedContracts(vaultAddress: string, registryAddress: 
         address: mockAddresses.mockUSDC,
         abi: MockERC20ABI,
       },
+      MockPYUSD: {
+        address: mockAddresses.mockPYUSD,
+        abi: MockERC20ABI,
+      },
       MockWETH: {
         address: mockAddresses.mockWETH,
         abi: MockWETH9ABI,
@@ -198,7 +294,7 @@ async function generateDeployedContracts(vaultAddress: string, registryAddress: 
         abi: MockATokenABI,
       },
       MockEthOracle: {
-        address: mockAddresses.oracleAddress,
+        address: mockAddresses.mockEthOracle,
         abi: OracleABI,
       },
       PriceConsumer: {
