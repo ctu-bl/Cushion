@@ -25,14 +25,14 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
 }) => (
   <SectionCard title="Take Loan via Cushion" className="h-full">
     <div className="mb-4 p-4 bg-info/10 rounded-lg">
-      <p className="text-sm text-white/80">
+      <p className="text-sm text-white">
         <strong>How it works:</strong> You pay Cushion ETH (collateral + fee), Cushion takes a loan on Aave for you, and you receive USDC.
       </p>
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="form-control">
         <label className="label">
-          <span className="label-text">Borrow Amount (USDC)</span>
+          <span className="label-text text-white">Borrow Amount (USDC)</span>
         </label>
         <input
           type="text"
@@ -41,18 +41,24 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
           value={borrowAmount}
           onChange={(e) => setBorrowAmount(e.target.value)}
           placeholder="1000"
-          className="input input-bordered"
+          className="input input-bordered text-white"
         />
       </div>
       <div className="form-control">
         <label className="label">
-          <span className="label-text">Collateral Amount (ETH)</span>
+          <span className="label-text text-white">Collateral Amount (ETH)</span>
         </label>
-        <EtherInput value={collateralAmount} onChange={setCollateralAmount} placeholder="1.0" />
+        <input
+          type="text"
+          value={collateralAmount}
+          onChange={(e) => setCollateralAmount(e.target.value)}
+          placeholder="1.0"
+          className="input input-bordered text-white"
+        />
       </div>
       <div className="form-control">
         <label className="label">
-          <span className="label-text">Actions</span>
+          <span className="label-text text-white">Actions</span>
         </label>
         <button className="btn btn-primary" onClick={onWrapLoan}>
           Take Loan via Cushion
@@ -60,18 +66,11 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
       </div>
       <div className="form-control">
         <label className="label">
-          <span className="label-text">Info</span>
+          <span className="label-text text-white">Info</span>
         </label>
-        <p className="text-sm text-white/70">Fee will be calculated by smart contract</p>
+        <p className="text-sm text-white">Fee will be calculated by smart contract</p>
       </div>
     </div>
-    {(createdWrapperAddress || wrapperAddress) && (
-      <div className="mt-4 p-4 bg-success/10 rounded-lg">
-        <p className="text-success font-semibold">Loan Created via Cushion!</p>
-        <p className="text-sm">Wrapper Address: {createdWrapperAddress || wrapperAddress}</p>
-        <p className="text-sm text-white/70">You received USDC and Cushion manages your Aave position</p>
-      </div>
-    )}
   </SectionCard>
 );
 
