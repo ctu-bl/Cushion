@@ -221,6 +221,10 @@ async function main() {
   console.log("  Mock Uniswap Router:    ", mockSwapRouter.address);
   console.log("\n💡 LoanWrapper contracts will be deployed dynamically when wrapping loans");
 
+  console.log("\n  LoanWrapperRegistry deployed to: ", registryAddress);
+  console.log("  Vault:                             ", vaultAddress);
+  console.log("  Mock ETH Oracle deployed to:       ", mockEthOracle.address);
+
   // Generate deployedContracts.ts for frontend
   const mockAddresses = {
     mockUSDC: mockUSDC.address,

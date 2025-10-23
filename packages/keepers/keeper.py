@@ -6,6 +6,8 @@ import threading
 import random
 import os
 
+from web3.exceptions import ContractLogicError
+
 # === Load environment variables ===
 load_dotenv()
 
@@ -194,14 +196,18 @@ def inject_to_loan(loan_address: str):
     :param loan_address: address of the loan
     :return: transaction hash
     """
-    nonce = w3.eth.get_transaction_count(ACCOUNT.address)
+    loan_address = w3.to_checksum_address(loan_address)
+    nonce = w3.eth.get_transaction_count(ACCOUNT.address, "pending")
+    gas_estimate = vault_contract.functions.injectToLoan(loan_address).estimate_gas({"from": ACCOUNT.address})
+
     tx = vault_contract.functions.injectToLoan(loan_address).build_transaction({
         "from": ACCOUNT.address,
         "chainId": CHAIN_ID,
-        "gas": 150000,
+        "nonce": nonce,
         "gasPrice": w3.eth.gas_price,
-        "nonce": nonce
+        "gas": gas_estimate + 5000,
     })
+
     return send_tx(tx)
 
 
@@ -211,14 +217,17 @@ def liquidate(loan_address: str):
     :param loan_address: address of the loan
     :return: transaction hash
     """
-    nonce = w3.eth.get_transaction_count(ACCOUNT.address)
+    loan_address = w3.to_checksum_address(loan_address)
+    nonce = w3.eth.get_transaction_count(ACCOUNT.address, "pending")
+    gas_estimate = vault_contract.functions.liquidate(loan_address).estimate_gas({"from": ACCOUNT.address})
     tx = vault_contract.functions.liquidate(loan_address).build_transaction({
         "from": ACCOUNT.address,
         "chainId": CHAIN_ID,
-        "gas": 150000,
+        "nonce": nonce,
         "gasPrice": w3.eth.gas_price,
-        "nonce": nonce
+        "gas": gas_estimate + 5000,
     })
+    vault_contract.functions.liquidate(loan_address).call({"from": ACCOUNT.address})
     return send_tx(tx)
 
 
@@ -228,15 +237,19 @@ def withdraw_from_loan(loan_address: str):
     :param loan_address: address of the loan
     :return: transaction hash
     """
-    nonce = w3.eth.get_transaction_count(ACCOUNT.address)
+    loan_address = w3.to_checksum_address(loan_address)
+    nonce = w3.eth.get_transaction_count(ACCOUNT.address, "pending")
+    gas_estimate = vault_contract.functions.withdrawFromLoan(loan_address).estimate_gas({"from": ACCOUNT.address})
     tx = vault_contract.functions.withdrawFromLoan(loan_address).build_transaction({
         "from": ACCOUNT.address,
         "chainId": CHAIN_ID,
-        "gas": 150000,
+        "nonce": nonce,
         "gasPrice": w3.eth.gas_price,
-        "nonce": nonce
+        "gas": gas_estimate + 5000,
     })
+    vault_contract.functions.withdrawFromLoan(loan_address).call({"from": ACCOUNT.address})
     return send_tx(tx)
+
 
 def get_all_wrappers():
     """
@@ -324,7 +337,7 @@ def monitoring():
                         liquidate(wrapper)
                     else:
                         print(f"HF ({hf}) < {HF_INJECT_THRESHOLD} → inject_to_loan({wrapper})")
-                        inject_to_loan(wrapper)
+                        tx = inject_to_loan(wrapper)
 
                 elif hf < HF_LIQUIDATE_THRESHOLD:
                     if locked:
@@ -371,7 +384,7 @@ def simulate_price():
             print(f"ERROR set_price failed: {e}")
 
         current_price = new_price
-        time.sleep(random.uniform(0.7, 1))
+        time.sleep(random.uniform(10, 13))
 
 def start_simulate_with_mockETH():
     """
@@ -400,8 +413,15 @@ def start_simulate_without_mockETH():
     Start only monitoring process in separate threads.
     This is for real run on blockchain without mock ETH.
     """
-    monitoring()
+    try:
+        monitoring()
+    except Exception as e:
+        print("[ERROR] ", e)
+        raise
+
+
 
 if __name__ == "__main__":
-    start_simulate_with_mockETH()
-    # start_simulate_without_mockETH()
+    # start_simulate_with_mockETH()
+    start_simulate_without_mockETH()
+
