@@ -17,6 +17,10 @@ interface IMockEthOracle {
  */
 contract MockUniswapRouter {
     address public immutable ethOracle;
+
+    address private immutable PYUSD_TOKEN;
+    address private immutable WETH_TOKEN;
+    address private immutable USDC;
     
     struct ExactInputSingleParams {
         address tokenIn;
@@ -29,8 +33,10 @@ contract MockUniswapRouter {
         uint160 sqrtPriceLimitX96;
     }
     
-    constructor(address _ethOracle) {
+    constructor(address _ethOracle, address _pyusd, address _usdc) {
         ethOracle = _ethOracle;
+        PYUSD_TOKEN = _pyusd;
+        USDC = _usdc;
     }
     
     // Simple 1:1 swap for testing with actual token transfers
@@ -44,7 +50,10 @@ contract MockUniswapRouter {
         // Get ETH price from oracle
         int256 ethPriceInt = IMockEthOracle(ethOracle).latestAnswer();
         uint8 ethPriceDecimals = IMockEthOracle(ethOracle).decimals();
+        
+        console.log("decimals:", ethPriceDecimals);
         uint256 ethPrice = uint256(ethPriceInt);
+        console.log("ETHPriceInt:", ethPrice);
         
         // Normalize ETH price to 1e6 (USDC/PYUSD decimals)
         uint256 ethPriceUsd_e6;
@@ -96,7 +105,7 @@ contract MockUniswapRouter {
                 }
             } else {
                 // Check if it's PYUSD to USDC swap (both 1e6 decimals)
-                if (params.tokenIn != params.tokenOut) {
+                if (params.tokenIn == PYUSD_TOKEN && params.tokenOut == USDC) {
                     console.log("MockUniswapRouter: PYUSD to USDC swap (1:1 ratio)");
                     // For PYUSD to USDC, use 1:1 ratio (both have 6 decimals)
                     amountOut = params.amountIn;

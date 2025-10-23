@@ -300,17 +300,20 @@ contract Vault is ERC4626, Ownable {
             console.log("ERROR: No injected assets found for this loan");
             revert Vault__NoInjectedAssets();
         }
-
+        // Tohle je uplne k nicemu
         uint256 collateralValueEth = ILoanWrapper(loan).getTotalCollateralValue();
         console.log("Collateral value in ETH:", collateralValueEth);
-        
+        uint256 debtValue = ILoanWrapper(loan).getTotalDebtValue();
+
         if (collateralValueEth == 0) {
             console.log("ERROR: Invalid loan address - no collateral value");
             revert Vault__InvalidLoanAddress();
         }
 
         // Convert ETH collateral value to PYUSD
-        uint256 amountToLiquidatePyUsd = _getEthValueInPyusd(collateralValueEth);
+        // Tohle je uplne zbytecny
+        //uint256 amountToLiquidatePyUsd = _getEthValueInPyusd(collateralValueEth);
+        uint256 amountToLiquidatePyUsd = _getPyusdAmountForUsdc(debtValue);
         console.log("Amount to liquidate in PYUSD:", amountToLiquidatePyUsd);
 
         uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
@@ -359,6 +362,8 @@ contract Vault is ERC4626, Ownable {
         console.log("Investor collateral to withdraw:", investorCollateral);
         console.log("User collateral to withdraw:", userCollateral);
         
+        // CO je zas tohle? xDD
+        // Do tyhle podminky to nikdy neskoci, protoze loan uz je repaid -> obe promenny jsou nastaveny na 0
         if (investorCollateral > 0 || userCollateral > 0) {
             console.log("Withdrawing all collateral from loan wrapper");
             ILoanWrapper(loan).decreaseCollateralForVault(investorCollateral, userCollateral);
@@ -387,10 +392,11 @@ contract Vault is ERC4626, Ownable {
         delete injectedAssets[loan];
 
         console.log("Emitting LoanLiquidated event");
-
+        console.log("CURR BALANCE:", address(this).balance);
         uint256 pyusdFromEth = _swapEthToPyUsd(address(this).balance);
         
         totalInjectedAssets += pyusdFromEth;
+        //totalPrincipal += pyusdFromEth;
 
         emit LoanLiquidated(loan, amountToLiquidatePyUsd);
         
@@ -436,6 +442,7 @@ contract Vault is ERC4626, Ownable {
         });
 
         uint256 amountPyUsdOut = SWAP_ROUTER.exactInputSingle(params);
+        console.log("Tak cos mi to dal:", amountPyUsdOut);
         if (amountPyUsdOut == 0) revert Vault__SwapFailed();
         return amountPyUsdOut;
     }
