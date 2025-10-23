@@ -19,6 +19,15 @@ const nextConfig: NextConfig = {
       "@ethersproject/strings/lib.esm/index.js": require.resolve("@ethersproject/strings/lib/index.js"),
       "@ethersproject/bytes/lib.esm/index.js": require.resolve("@ethersproject/bytes/lib/index.js"),
     };
+    
+    // Disable Lit development mode warnings
+    config.plugins = config.plugins || [];
+    config.plugins.push(
+      new (require('webpack')).DefinePlugin({
+        'process.env.LIT_DEV_MODE': JSON.stringify('false'),
+      })
+    );
+    
     return config;
   },
 };

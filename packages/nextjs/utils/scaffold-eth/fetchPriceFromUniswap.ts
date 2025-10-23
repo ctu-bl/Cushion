@@ -17,7 +17,16 @@ const ABI = parseAbi([
   "function token1() external view returns (address)",
 ]);
 
+// Cache to prevent multiple API calls
+let priceCache: { price: number; timestamp: number } | null = null;
+const CACHE_DURATION = 120000; // 1 minute cache
+
 export const fetchPriceFromUniswap = async (targetNetwork: ChainWithAttributes): Promise<number> => {
+  // Return cached price if still valid
+  if (priceCache && Date.now() - priceCache.timestamp < CACHE_DURATION) {
+    return priceCache.price;
+  }
+
   if (
     targetNetwork.nativeCurrency.symbol !== "ETH" &&
     targetNetwork.nativeCurrency.symbol !== "SEP" &&
@@ -25,6 +34,7 @@ export const fetchPriceFromUniswap = async (targetNetwork: ChainWithAttributes):
   ) {
     return 0;
   }
+  
   try {
     const DAI = new Token(1, "0x6B175474E89094C44Da98b954EedeAC495271d0F", 18);
     const TOKEN = new Token(
@@ -39,20 +49,22 @@ export const fetchPriceFromUniswap = async (targetNetwork: ChainWithAttributes):
       abi: ABI,
     };
 
-    const reserves = await publicClient.readContract({
-      ...wagmiConfig,
-      functionName: "getReserves",
-    });
+    // Batch all contract calls to reduce API requests
+    const [reserves, token0Address, token1Address] = await Promise.all([
+      publicClient.readContract({
+        ...wagmiConfig,
+        functionName: "getReserves",
+      }),
+      publicClient.readContract({
+        ...wagmiConfig,
+        functionName: "token0",
+      }),
+      publicClient.readContract({
+        ...wagmiConfig,
+        functionName: "token1",
+      }),
+    ]);
 
-    const token0Address = await publicClient.readContract({
-      ...wagmiConfig,
-      functionName: "token0",
-    });
-
-    const token1Address = await publicClient.readContract({
-      ...wagmiConfig,
-      functionName: "token1",
-    });
     const token0 = [TOKEN, DAI].find(token => token.address === token0Address) as Token;
     const token1 = [TOKEN, DAI].find(token => token.address === token1Address) as Token;
     const pair = new Pair(
@@ -61,6 +73,10 @@ export const fetchPriceFromUniswap = async (targetNetwork: ChainWithAttributes):
     );
     const route = new Route([pair], TOKEN, DAI);
     const price = parseFloat(route.midPrice.toSignificant(6));
+    
+    // Cache the result
+    priceCache = { price, timestamp: Date.now() };
+    
     return price;
   } catch (error) {
     console.error(
