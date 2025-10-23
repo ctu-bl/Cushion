@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 import {LoanWrapper} from "../LoanWrapper.sol";
@@ -11,6 +12,11 @@ interface IWETH9Like {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
 }
 
+/**
+ * @title MockWETH9
+ * @author CTU Blockchain Lab
+ * @notice Mock for wrapped ETH. Behaves the same as ERC20
+ */
 contract MockWETH9 is IWETH9Like {
     string public name = "Mock Wrapped Ether";
     string public symbol = "WETH";

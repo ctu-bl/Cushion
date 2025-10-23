@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.19;
 
 /**
  * @title MockEthOracle
- * @dev A mock oracle contract to simulate ETH price feeds, similar to Chainlink.
- *      Only the owner can update the price. Useful for testing.
+ * @author CTU Blockchain Lab
+ * @notice A mock oracle contract to simulate ETH price feeds, similar to Chainlink.
+ * 
+ * @dev Only the owner can update the price. Useful for testing.
  */
 contract MockEthOracle {
     /// @notice Address of the contract owner
@@ -46,8 +49,9 @@ contract MockEthOracle {
 
     /**
      * @notice Sets a new price
-     * @dev Only callable by the owner
      * @param _newPrice New price to set (e.g., for 3000 USD with decimals=8 => 3000 * 10**8)
+     *
+     * @dev Only callable by the owner     
      */
     function setPrice(int256 _newPrice) external {
         price = _newPrice;
@@ -81,8 +85,9 @@ contract MockEthOracle {
 
     /**
      * @notice Transfers ownership of the contract to a new address
-     * @dev Only callable by the current owner. Cannot transfer to zero address.
      * @param _newOwner The address of the new owner
+     *
+     * @dev Only callable by the current owner. Cannot transfer to zero address
      */
     function transferOwnership(address _newOwner) external onlyOwner {
         require(_newOwner != address(0), "MockEthOracle: zero address");
@@ -92,7 +97,8 @@ contract MockEthOracle {
 
 /**
  * @title PriceConsumer
- * @dev Example contract consuming the MockEthOracle
+ * @author CTU Blockchain Lab
+ * @notice Example contract consuming the MockEthOracle
  */
 contract PriceConsumer {
     /// @notice Reference to the MockEthOracle

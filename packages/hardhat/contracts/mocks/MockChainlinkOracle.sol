@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 /**
  * @title MockChainlinkOracle
- * @author CtuBlockhain Lab
+ * @author CTU Blockchain Lab
  * @notice Mock implementation of Chainlink price feed for testing
  */
 contract MockChainlinkOracle {

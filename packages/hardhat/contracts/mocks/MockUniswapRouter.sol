@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -11,7 +12,7 @@ interface IMockEthOracle {
 
 /**
  * @title MockUniswapRouter
- * @author CtuBlockhain Lab
+ * @author CTU Blockchain Lab
  * @notice Mock implementation of Uniswap V3 router for testing
  */
 contract MockUniswapRouter {
