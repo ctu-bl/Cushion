@@ -33,7 +33,7 @@ export default function SimulationPage() {
     return (
       <main className="min-h-screen bg-base-200 py-12 px-4">
         <div className="container mx-auto">
-          <h1 className="text-4xl font-bold mb-6 text-white">Aave Simulation</h1>
+          <h1 className="text-4xl font-bold mb-6 text-white">Cushion Simulation</h1>
           <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-md p-8 text-center">
             <h2 className="text-xl font-semibold mb-2 text-white">Connect your wallet</h2>
             <p className="text-white mb-6">Please connect to access the simulation.</p>
@@ -47,7 +47,7 @@ export default function SimulationPage() {
   return (
     <main className="min-h-screen bg-base-200 py-12 px-4">
       <div className="container mx-auto">
-        <h1 className="text-4xl font-bold mb-6 text-white">Aave Simulation</h1>
+        <h1 className="text-4xl font-bold mb-6 text-white">Cushion Simulation</h1>
         
         {/* Top row: Account + Pool in one line */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
@@ -114,19 +114,23 @@ export default function SimulationPage() {
           />
         )}
 
-        <EthPriceSimulator 
-          currentEthPrice={ethPriceData.currentEthPrice as bigint | undefined} 
-          priceDecimals={ethPriceData.priceDecimals as number | undefined} 
-          newEthPrice={ethPriceData.newEthPrice} 
-          setNewEthPrice={ethPriceData.setNewEthPrice} 
-          isUpdatingPrice={ethPriceData.isUpdatingPrice} 
-          onUpdatePrice={ethPriceData.handleEthPriceUpdate} 
-        />
+        <div className="mb-8">
+          <EthPriceSimulator 
+            currentEthPrice={ethPriceData.currentEthPrice as bigint | undefined} 
+            priceDecimals={ethPriceData.priceDecimals as number | undefined} 
+            newEthPrice={ethPriceData.newEthPrice} 
+            setNewEthPrice={ethPriceData.setNewEthPrice} 
+            isUpdatingPrice={ethPriceData.isUpdatingPrice} 
+            onUpdatePrice={ethPriceData.handleEthPriceUpdate} 
+          />
+        </div>
 
-        <RegistryInfo 
-          registryAddress={simulationData.registryAddress as string | undefined} 
-          allWrappers={simulationData.allWrappers as string[] | undefined} 
-        />
+        <div className="mb-8">
+          <RegistryInfo 
+            registryAddress={simulationData.registryAddress as string | undefined} 
+            allWrappers={simulationData.allWrappers as string[] | undefined} 
+          />
+        </div>
 
         <VaultControls
           allWrappers={simulationData.allWrappers as string[] | undefined}

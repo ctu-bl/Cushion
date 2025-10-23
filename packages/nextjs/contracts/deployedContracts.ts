@@ -8,10 +8,14 @@ const deployedContracts = {
   "31337": {
     "Vault": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x627b9A657eac8c3463AD17009a424dFE3FDbd0b1",
 =======
       "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0x998abeb3E57409262aE5b751f60747921B33613E",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "inputs": [
@@ -1589,10 +1593,14 @@ const deployedContracts = {
     },
     "LoanWrapperRegistry": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0xa62835D1A6bf5f521C4e2746E1F51c923b8f3483",
 =======
       "address": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "inputs": [
@@ -1881,10 +1889,14 @@ const deployedContracts = {
     },
     "MockUSDC": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x9338CA7d556248055f5751d85cDA7aD6eF254433",
 =======
       "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "anonymous": false,
@@ -2148,10 +2160,14 @@ const deployedContracts = {
     },
     "MockPYUSD": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x9c65f85425c619A6cB6D29fF8d57ef696323d188",
 =======
       "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "anonymous": false,
@@ -2415,10 +2431,14 @@ const deployedContracts = {
     },
     "MockWETH": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x7Cf4be31f546c04787886358b9486ca3d62B9acf",
 =======
       "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "stateMutability": "payable",
@@ -2661,10 +2681,14 @@ const deployedContracts = {
     },
     "MockPool": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0xA21DDc1f17dF41589BC6A5209292AED2dF61Cc94",
 =======
       "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0xc5a5C42992dECbae36851359345FE25997F5C42d",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "inputs": [
@@ -4647,10 +4671,14 @@ const deployedContracts = {
     },
     "MockAddressesProvider": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x2A590C461Db46bca129E8dBe5C3998A8fF402e76",
 =======
       "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0x67d269191c92Caf3cD7723F116c85e6E9bf55933",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "inputs": [
@@ -5275,10 +5303,14 @@ const deployedContracts = {
     },
     "MockEthOracle": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0x33E45b187da34826aBCEDA1039231Be46f1b05Af",
 =======
       "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0x7a2088a1bFc9d81c55368AE168C2C02570cB814F",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "inputs": [
@@ -5421,10 +5453,14 @@ const deployedContracts = {
     },
     "PriceConsumer": {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "address": "0xBEe6FFc1E8627F51CcDF0b4399a1e1abc5165f15",
 =======
       "address": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
 >>>>>>> 4b5f2d9 (force dark mode)
+=======
+      "address": "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf",
+>>>>>>> f486153 (finished simulation page design)
       "abi": [
         {
           "inputs": [

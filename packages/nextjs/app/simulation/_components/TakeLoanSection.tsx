@@ -24,11 +24,6 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
   wrapperAddress,
 }) => (
   <SectionCard title="Take Loan via Cushion" className="h-full">
-    <div className="mb-4 p-4 bg-info/10 rounded-lg">
-      <p className="text-sm text-white">
-        <strong>How it works:</strong> You pay Cushion ETH (collateral + fee), Cushion takes a loan on Aave for you, and you receive USDC.
-      </p>
-    </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="form-control">
         <label className="label">
@@ -57,18 +52,9 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
         />
       </div>
       <div className="form-control">
-        <label className="label">
-          <span className="label-text text-white">Actions</span>
-        </label>
-        <button className="btn btn-primary" onClick={onWrapLoan}>
+        <button className="btn btn-primary w-full" onClick={onWrapLoan}>
           Take Loan via Cushion
         </button>
-      </div>
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text text-white">Info</span>
-        </label>
-        <p className="text-sm text-white">Fee will be calculated by smart contract</p>
       </div>
     </div>
   </SectionCard>

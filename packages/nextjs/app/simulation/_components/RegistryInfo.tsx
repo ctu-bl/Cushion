@@ -13,11 +13,11 @@ export const RegistryInfo: React.FC<RegistryInfoProps> = ({ registryAddress, all
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <p className="text-sm text-white">Registry Address</p>
-        <p className="font-mono text-sm">{registryAddress}</p>
+        <p className="font-mono text-sm text-white">{registryAddress}</p>
       </div>
       <div>
         <p className="text-sm text-white">Total Wrappers Created</p>
-        <p className="font-mono text-lg font-bold">{allWrappers?.length || 0}</p>
+        <p className="font-mono text-lg font-bold text-white">{allWrappers?.length || 0}</p>
       </div>
     </div>
     {allWrappers && allWrappers.length > 0 && (
@@ -25,7 +25,7 @@ export const RegistryInfo: React.FC<RegistryInfoProps> = ({ registryAddress, all
         <p className="text-sm text-white mb-2">All Created Wrappers:</p>
         <div className="space-y-1 max-h-32 overflow-y-auto">
           {allWrappers.map((wrapper: string, index: number) => (
-            <div key={index} className="font-mono text-sm bg-base-200 p-2 rounded">{wrapper}</div>
+            <div key={index} className="font-mono text-sm bg-base-200 p-2 rounded text-white">{wrapper}</div>
           ))}
         </div>
       </div>

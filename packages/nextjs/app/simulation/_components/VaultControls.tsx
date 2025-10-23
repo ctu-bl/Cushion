@@ -18,9 +18,9 @@ const WrapperRow: React.FC<{ wrapper: `0x${string}`; onInject: VaultControlsProp
         <span className="text-xs text-white/70">Wrapper</span>
         <span className="font-mono text-sm text-white">{wrapper}</span>
       </div>
-      <div className="text-right">
-        <span className="text-xs text-white/70">HF</span>
-        <div className="font-mono text-sm text-white">{hf ? (Number(hf) / 1e18).toFixed(2) : "-"}</div>
+      <div className="text-center">
+        <span className="text-xs text-white/70">Health Factor</span>
+        <div className="font-mono text-lg font-bold text-white">{hf ? (Number(hf) / 1e18).toFixed(2) : "-"}</div>
       </div>
       <div className="flex gap-2">
         <button className="btn btn-primary btn-sm" onClick={() => onInject(wrapper)}>Inject</button>
