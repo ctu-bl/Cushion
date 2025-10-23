@@ -1,6 +1,7 @@
 import "@rainbow-me/rainbowkit/styles.css";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import { ThemeProvider } from "~~/components/ThemeProvider";
+import { SuccessBarProvider } from "./_contexts/SuccessBarContext";
 import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
@@ -14,7 +15,9 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
     <html suppressHydrationWarning className={``}>
       <body>
         <ThemeProvider enableSystem defaultTheme="dark" forcedTheme="dark">
-          <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
+          <SuccessBarProvider>
+            <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
+          </SuccessBarProvider>
         </ThemeProvider>
       </body>
     </html>
