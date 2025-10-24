@@ -93,10 +93,10 @@ contract LoanWrapperRegistry {
             wrapperOf[borrower] = wrapper;
             allWrappers.push(wrapper);
         } else{
-            LoanWrapper(payable(wrapper)).setActive();
+            LoanWrapper(payable(wrapper)).setActive(msg.value - fee, borrowedAmount);
         }
         emit LoanWrapped(borrower, wrapper, borrowedAmount, WETH);
-
+        
         IPool pool = IPool(provider.getPool());
 
         // ETH -> WETH

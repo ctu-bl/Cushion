@@ -46,6 +46,7 @@ contract LoanWrapper is Ownable {
 
     // ------------------CONSTANTS------------------
     address private VAULT;
+    address private REGISTRY;
     uint256 private immutable LOCKING_THRESHOLD = 115 * 1e16;
     uint256 private immutable UNLOCKING_THRESHOLD = 150 * 1e16;
     address private COL_TOKEN_ADDR;
@@ -105,6 +106,7 @@ contract LoanWrapper is Ownable {
             VAULT = vault;
             COL_TOKEN_ADDR = colTokenAddr;
             DEBT_TOKEN_ADDR = debtTokenAddr;
+            REGISTRY = msg.sender;
             PROVIDER = IPoolAddressesProvider(provider);
 
             IPool pool = IPool(PROVIDER.getPool());
@@ -146,6 +148,13 @@ contract LoanWrapper is Ownable {
         }
         if (msg.sender != owner() && msg.sender != VAULT && hf > LOCKING_THRESHOLD) {
             revert LoanWrapper__NotAccesibleForInvestor();
+        }
+        _;
+    }
+
+    modifier onlyRegistry() {
+        if (msg.sender != REGISTRY) {
+            revert LoanWrapper__AccessDenied();
         }
         _;
     }
@@ -398,8 +407,10 @@ contract LoanWrapper is Ownable {
         return computeHF(col, debt, lt, 0, 0);
     }
 
-    function setActive() external onlyOwnerOrVault {
+    function setActive(uint256 col, uint256 debt) external onlyRegistry {
         isActive = true;
+        s_initCollateral = col;
+        s_borrowedAmount = debt;
     }
 
     function getIsActive() external view returns (bool) {
