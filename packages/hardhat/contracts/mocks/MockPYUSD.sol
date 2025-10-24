@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -6,8 +7,8 @@ import "hardhat/console.sol";
 
 /**
  * @title MockPYUSD
- * @author CtuBlockchain Lab
- * @notice Mock ERC20 s 6 decimals (jako USDC/PYUSD)
+ * @author CTU Blockchain Lab
+ * @notice Mock ERC20 with 6 decimals (same as USDC/PYUSD)
  */
 contract MockPYUSD is IERC20 {
     mapping(address => uint256) private _balances;

@@ -103,7 +103,7 @@ async function main() {
   console.log("\n🔄 Deploying Mock Uniswap Router...");
   const MockUniswapRouterArtifact = await hre.artifacts.readArtifact("MockUniswapRouter");
   const MockUniswapRouterFactory = new ethersLib.ContractFactory(MockUniswapRouterArtifact.abi, MockUniswapRouterArtifact.bytecode, deployer);
-  const mockSwapRouter = await MockUniswapRouterFactory.deploy(mockEthOracle.address);
+  const mockSwapRouter = await MockUniswapRouterFactory.deploy(mockEthOracle.address, mockPYUSD.address, mockUSDC.address);
   await mockSwapRouter.deployTransaction.wait();
   console.log("✅ Mock Uniswap Router deployed to:", mockSwapRouter.address);
 

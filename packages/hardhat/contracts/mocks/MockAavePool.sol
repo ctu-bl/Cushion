@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
@@ -20,6 +21,11 @@ interface IMockEthOracle {
     function decimals() external view returns (uint8);
 }
 
+/**
+ * @title MockPool
+ * @author CTU Blockchain Lab
+ * @notice Mock for simulating AAVE Pool
+ */
 abstract contract MockPool is IPool {
     address public immutable usdc;
     address public immutable weth;

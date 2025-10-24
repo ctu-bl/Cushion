@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 interface IApproveDelegation {
@@ -7,7 +8,8 @@ interface IApproveDelegation {
 
 /**
  * @title MockVariableDebtToken
- * @dev Minimal surface exposing approveDelegation used by LoanWrapper constructor
+ * @author CTU Blockchain Lab
+ * @notice Minimal surface exposing approveDelegation used by LoanWrapper constructor
  */
 contract MockVariableDebtToken is IApproveDelegation {
     mapping(address => mapping(address => uint256)) public borrowAllowance;

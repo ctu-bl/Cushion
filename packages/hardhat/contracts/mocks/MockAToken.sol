@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 interface IERC20Like {
@@ -7,6 +8,11 @@ interface IERC20Like {
     function balanceOf(address who) external view returns (uint256);
 }
 
+/**
+ * @title MockAToken
+ * @author CTU Blockchain Lab
+ * @notice Unused - redundant for this project
+ */
 contract MockAToken {
     IERC20Like public immutable underlying;
 

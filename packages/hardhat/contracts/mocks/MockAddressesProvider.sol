@@ -1,8 +1,14 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 
+/**
+ * @title MockAddressesProvider
+ * @author CTU Blockchain Lab
+ * @notice Mock for providing AAVE Pool address
+ */
 contract MockAddressesProvider is IPoolAddressesProvider {
     address public pool;
     constructor(address _pool) { pool = _pool; }
