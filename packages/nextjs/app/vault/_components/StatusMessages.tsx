@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import SuccessToast from "../../_components/SuccessToast";
 
 type StatusMessagesProps = {
   isApproveSuccess: boolean;
@@ -39,13 +40,11 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
 }) => {
   return (
     <>
-      {isApproveSuccess && (
-        <SuccessToast
-          message={`Successfully approved ${approveAmount} PYUSD!`}
-          isVisible={isApproveSuccess}
-          onClose={onApproveClose}
-        />
-      )}
+      <SuccessToast
+        message={`Successfully approved ${approveAmount} PYUSD!`}
+        isVisible={isApproveSuccess}
+        onClose={onApproveClose}
+      />
 
       {approveError && (
         <div className="bg-red-500 text-white p-4 text-center mb-6 rounded-lg">
@@ -72,13 +71,11 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
         </div>
       )}
 
-      {isDepositSuccess && (
-        <SuccessToast
-          message={`Successfully deposited ${depositAmount} PYUSD!`}
-          isVisible={isDepositSuccess}
-          onClose={onDepositClose}
-        />
-      )}
+      <SuccessToast
+        message={`Successfully deposited ${depositAmount} PYUSD!`}
+        isVisible={isDepositSuccess}
+        onClose={onDepositClose}
+      />
 
       {depositError && (
         <div className="bg-red-500 text-white p-4 text-center mb-6 rounded-lg">
@@ -105,13 +102,11 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
         </div>
       )}
 
-      {isWithdrawSuccess && (
-        <SuccessToast
-          message={`Successfully withdrew ${withdrawAmount} PYUSD!`}
-          isVisible={isWithdrawSuccess}
-          onClose={onWithdrawClose}
-        />
-      )}
+      <SuccessToast
+        message={`Successfully withdrew ${withdrawAmount} PYUSD!`}
+        isVisible={isWithdrawSuccess}
+        onClose={onWithdrawClose}
+      />
 
       {withdrawError && (
         <div className="bg-red-500 text-white p-4 text-center mb-6 rounded-lg">
