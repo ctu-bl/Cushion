@@ -26,35 +26,31 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control">
-          <label className="label">
-            <span className="label-text text-white">Borrow Amount (USDC)</span>
-          </label>
-          <div className="mt-2">
+          <div className="mt-4">
             <input
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               value={borrowAmount}
               onChange={(e) => setBorrowAmount(e.target.value)}
-              placeholder="1000"
+              placeholder="Amount in USDC"
               className="input input-bordered text-white bg-base-200 w-full"
             />
+            <div className="text-xs text-white/70 mt-2">Enter amount in USDC (e.g., 1000)</div>
           </div>
         </div>
         <div className="form-control">
-          <label className="label">
-            <span className="label-text text-white">Collateral Amount (ETH)</span>
-          </label>
-          <div className="mt-2">
+          <div className="mt-4">
             <input
               type="text"
               inputMode="numeric"
               pattern="[0-9.]*"
               value={collateralAmount}
               onChange={(e) => setCollateralAmount(e.target.value)}
-              placeholder="1.0"
+              placeholder="Amount in ETH"
               className="input input-bordered text-white bg-base-200 w-full"
             />
+            <div className="text-xs text-white/70 mt-2">Enter amount in ETH (e.g., 1.0)</div>
           </div>
         </div>
       </div>
