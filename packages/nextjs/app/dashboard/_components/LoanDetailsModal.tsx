@@ -4,6 +4,8 @@ interface LoanDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   loanData?: {
+    wrapperAddress?: string;
+    owner?: string;
     healthFactor?: string;
     totalCollateral?: string;
     totalDebt?: string;
@@ -52,6 +54,50 @@ export const LoanDetailsModal: React.FC<LoanDetailsModalProps> = ({
         </div>
 
         <div className="space-y-6">
+          {/* Wrapper Address */}
+          <div className="bg-base-200/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-white">Wrapper Address</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-mono text-sm">{loanData?.wrapperAddress || "0x..."}</span>
+                <span className="text-success">✓</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="bg-base-200/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-white">Status</span>
+              <div className="flex items-center gap-2">
+                <span className="text-success">✓</span>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  loanData?.isLocked 
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30" 
+                    : "bg-green-500/20 text-green-400 border border-green-500/30"
+                }`}>
+                  {loanData?.isLocked ? "Locked" : "Active"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Owner */}
+          <div className="bg-base-200/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-white">Owner</span>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                  {loanData?.owner?.slice(2, 4).toUpperCase() || "??"}
+                </div>
+                <span className="text-white font-mono text-sm">{loanData?.owner || "0x..."}</span>
+                <button className="btn btn-ghost btn-xs text-white/70 hover:text-white">
+                  📋
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Health Factor */}
           <div className="bg-base-200/50 rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
@@ -75,42 +121,35 @@ export const LoanDetailsModal: React.FC<LoanDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Collateral Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-base-200/50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-white mb-3">Collateral</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-white/70">Total Collateral:</span>
-                  <span className="text-white font-mono">{loanData?.totalCollateral || "0.00"} ETH</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/70">Your Collateral:</span>
-                  <span className="text-white font-mono">{loanData?.ownerCollateral || "0.00"} ETH</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/70">Investor Collateral:</span>
-                  <span className="text-white font-mono">{loanData?.investorCollateral || "0.00"} ETH</span>
-                </div>
-              </div>
+          {/* Total Collateral */}
+          <div className="bg-base-200/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-white">Total Collateral</span>
+              <span className="text-white font-mono text-lg">{loanData?.totalCollateral || "0.0000"} WETH</span>
             </div>
+          </div>
 
-            <div className="bg-base-200/50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-white mb-3">Debt</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-white/70">Total Debt:</span>
-                  <span className="text-white font-mono">{loanData?.totalDebt || "0.00"} USDC</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/70">Status:</span>
-                  <span className={`badge ${
-                    loanData?.isLocked ? "badge-error" : "badge-success"
-                  }`}>
-                    {loanData?.isLocked ? "Locked" : "Active"}
-                  </span>
-                </div>
-              </div>
+          {/* Total Debt */}
+          <div className="bg-base-200/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-white">Total Debt</span>
+              <span className="text-white font-mono text-lg">{loanData?.totalDebt || "0.00"} USDC</span>
+            </div>
+          </div>
+
+          {/* Your Collateral */}
+          <div className="bg-base-200/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-white">Your Collateral</span>
+              <span className="text-white font-mono text-lg">{loanData?.ownerCollateral || "0.0000"} WETH</span>
+            </div>
+          </div>
+
+          {/* Investor Collateral */}
+          <div className="bg-base-200/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold text-white">Investor Collateral</span>
+              <span className="text-white font-mono text-lg">{loanData?.investorCollateral || "0.0000"} WETH</span>
             </div>
           </div>
 

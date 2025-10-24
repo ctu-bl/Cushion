@@ -234,6 +234,10 @@ export default function DashboardPage() {
           }
         }}
         maxAmount={simulationData.mockUSDCBalance ? (Number(simulationData.mockUSDCBalance) / 1e6).toFixed(2) : "0.00"}
+        currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
+        totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
+        totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
+        ethPrice="2000"
       />
 
       <RepayDebtModal
@@ -249,6 +253,10 @@ export default function DashboardPage() {
           }
         }}
         maxAmount={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
+        currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
+        totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
+        totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
+        ethPrice="2000"
       />
 
       <RepayAllDebtModal
@@ -275,11 +283,13 @@ export default function DashboardPage() {
         isOpen={showLoanDetails}
         onClose={() => setShowLoanDetails(false)}
         loanData={{
-          healthFactor: wrapperData.healthFactor?.toString() || "0.00",
-          totalCollateral: wrapperData.totalCollateral?.toString() || "0.00",
-          totalDebt: wrapperData.totalDebt?.toString() || "0.00",
-          ownerCollateral: wrapperData.ownerCollateral?.toString() || "0.00",
-          investorCollateral: wrapperData.investorCollateral?.toString() || "0.00",
+          wrapperAddress: simulationData.userWrapperAddress,
+          owner: address,
+          healthFactor: wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00",
+          totalCollateral: wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000",
+          totalDebt: wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00",
+          ownerCollateral: wrapperData.ownerCollateral ? (Number(wrapperData.ownerCollateral) / 1e18).toFixed(4) : "0.0000",
+          investorCollateral: wrapperData.investorCollateral ? (Number(wrapperData.investorCollateral) / 1e18).toFixed(4) : "0.0000",
           isLocked: Boolean(wrapperData.isLocked)
         }}
       />

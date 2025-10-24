@@ -6,6 +6,10 @@ interface BorrowMoreModalProps {
   onBorrowMore: (amount: string) => void;
   isLoading?: boolean;
   maxAmount?: string;
+  currentHealthFactor?: string;
+  totalCollateral?: string;
+  totalDebt?: string;
+  ethPrice?: string;
 }
 
 export const BorrowMoreModal: React.FC<BorrowMoreModalProps> = ({
@@ -13,10 +17,41 @@ export const BorrowMoreModal: React.FC<BorrowMoreModalProps> = ({
   onClose,
   onBorrowMore,
   isLoading = false,
-  maxAmount = "0"
+  maxAmount = "0",
+  currentHealthFactor = "0",
+  totalCollateral = "0",
+  totalDebt = "0",
+  ethPrice = "2000"
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState("");
+
+  // Calculate new health factor after borrowing more
+  const calculateNewHealthFactor = () => {
+    if (!amount || parseFloat(amount) <= 0) return parseFloat(currentHealthFactor);
+    
+    const borrowAmount = parseFloat(amount);
+    const currentCollateral = parseFloat(totalCollateral);
+    const currentDebt = parseFloat(totalDebt);
+    const price = parseFloat(ethPrice);
+    
+    if (currentDebt <= 0) return Number.MAX_SAFE_INTEGER;
+    
+    // Convert ETH to USD value
+    const collateralValueUsd = currentCollateral * price;
+    const newDebtValueUsd = currentDebt + borrowAmount;
+    
+    // Health Factor = (Collateral Value * Liquidation Threshold) / Debt Value
+    // Using 85% liquidation threshold (0.85)
+    const liquidationThreshold = 0.85;
+    const newHealthFactor = (collateralValueUsd * liquidationThreshold) / newDebtValueUsd;
+    
+    return newHealthFactor;
+  };
+
+  const newHealthFactor = calculateNewHealthFactor();
+  const isHealthFactorTooLow = newHealthFactor < 1.5;
+  const isHealthFactorWarning = newHealthFactor < 2.0 && newHealthFactor >= 1.5;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,9 +111,28 @@ export const BorrowMoreModal: React.FC<BorrowMoreModalProps> = ({
             <div className="text-sm text-white/80 mb-2">
               <span className="font-semibold">Max Available:</span> {maxAmount} USDC
             </div>
-            <div className="text-sm text-white/80">
-              <span className="font-semibold">Current Debt:</span> $0.00 USDC
+            <div className="text-sm text-white/80 mb-2">
+              <span className="font-semibold">Current Health Factor:</span> {parseFloat(currentHealthFactor).toFixed(2)}
             </div>
+            {amount && parseFloat(amount) > 0 && (
+              <div className={`text-sm mb-2 ${
+                isHealthFactorTooLow ? 'text-error' : 
+                isHealthFactorWarning ? 'text-warning' : 
+                'text-white/80'
+              }`}>
+                <span className="font-semibold">New Health Factor:</span> {newHealthFactor.toFixed(2)}
+                {isHealthFactorTooLow && (
+                  <span className="block text-xs text-error mt-1">
+                    ⚠️ Health Factor will be below 1.5 - Risk of liquidation!
+                  </span>
+                )}
+                {isHealthFactorWarning && (
+                  <span className="block text-xs text-warning mt-1">
+                    ⚠️ Health Factor will be below 2.0 - High risk of liquidation!
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -89,13 +143,18 @@ export const BorrowMoreModal: React.FC<BorrowMoreModalProps> = ({
               Cancel
             </button>
             <button
-              className="btn btn-primary flex-1"
+              className={`btn flex-1 ${
+                isHealthFactorTooLow
+                  ? "btn-secondary"
+                  : "btn-primary"
+              }`}
               onClick={handleSubmit}
               disabled={
                 !amount ||
                 parseFloat(amount) <= 0 ||
                 parseFloat(amount) > parseFloat(maxAmount.replace(/,/g, '')) ||
-                isLoading
+                isLoading ||
+                isHealthFactorTooLow
               }
             >
               {isLoading ? "Borrowing..." : "Borrow More"}

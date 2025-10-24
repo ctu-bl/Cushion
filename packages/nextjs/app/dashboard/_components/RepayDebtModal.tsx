@@ -6,6 +6,10 @@ interface RepayDebtModalProps {
   onRepayDebt: (amount: string) => void;
   isLoading?: boolean;
   maxAmount?: string;
+  currentHealthFactor?: string;
+  totalCollateral?: string;
+  totalDebt?: string;
+  ethPrice?: string;
 }
 
 export const RepayDebtModal: React.FC<RepayDebtModalProps> = ({
@@ -13,10 +17,42 @@ export const RepayDebtModal: React.FC<RepayDebtModalProps> = ({
   onClose,
   onRepayDebt,
   isLoading = false,
-  maxAmount = "0"
+  maxAmount = "0",
+  currentHealthFactor = "0",
+  totalCollateral = "0",
+  totalDebt = "0",
+  ethPrice = "2000"
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState("");
+
+  // Calculate new health factor after repaying debt
+  const calculateNewHealthFactor = () => {
+    if (!amount || parseFloat(amount) <= 0) return parseFloat(currentHealthFactor);
+    
+    const repayAmount = parseFloat(amount);
+    const currentCollateral = parseFloat(totalCollateral);
+    const currentDebt = parseFloat(totalDebt);
+    const price = parseFloat(ethPrice);
+    
+    if (currentDebt <= 0) return Number.MAX_SAFE_INTEGER;
+    
+    // Convert ETH to USD value
+    const collateralValueUsd = currentCollateral * price;
+    const newDebtValueUsd = Math.max(0, currentDebt - repayAmount);
+    
+    if (newDebtValueUsd <= 0) return Number.MAX_SAFE_INTEGER;
+    
+    // Health Factor = (Collateral Value * Liquidation Threshold) / Debt Value
+    // Using 85% liquidation threshold (0.85)
+    const liquidationThreshold = 0.85;
+    const newHealthFactor = (collateralValueUsd * liquidationThreshold) / newDebtValueUsd;
+    
+    return newHealthFactor;
+  };
+
+  const newHealthFactor = calculateNewHealthFactor();
+  const isHealthFactorImproving = newHealthFactor > parseFloat(currentHealthFactor);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,9 +112,19 @@ export const RepayDebtModal: React.FC<RepayDebtModalProps> = ({
             <div className="text-sm text-white/80 mb-2">
               <span className="font-semibold">Current Debt:</span> {maxAmount} USDC
             </div>
-            <div className="text-sm text-white/80">
-              <span className="font-semibold">Available:</span> {maxAmount} USDC
+            <div className="text-sm text-white/80 mb-2">
+              <span className="font-semibold">Current Health Factor:</span> {parseFloat(currentHealthFactor).toFixed(2)}
             </div>
+            {amount && parseFloat(amount) > 0 && (
+              <div className={`text-sm mb-2 ${isHealthFactorImproving ? 'text-success' : 'text-white/80'}`}>
+                <span className="font-semibold">New Health Factor:</span> {newHealthFactor.toFixed(2)}
+                {isHealthFactorImproving && (
+                  <span className="block text-xs text-success mt-1">
+                    ✅ Health Factor will improve!
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
