@@ -6,6 +6,10 @@ interface AddCollateralModalProps {
   onAddCollateral: (amount: string) => void;
   isLoading?: boolean;
   maxAmount?: string;
+  currentHealthFactor?: string;
+  totalCollateral?: string;
+  totalDebt?: string;
+  ethPrice?: string;
 }
 
 export const AddCollateralModal: React.FC<AddCollateralModalProps> = ({
@@ -13,10 +17,43 @@ export const AddCollateralModal: React.FC<AddCollateralModalProps> = ({
   onClose,
   onAddCollateral,
   isLoading = false,
-  maxAmount = "0"
+  maxAmount = "0",
+  currentHealthFactor = "0",
+  totalCollateral = "0",
+  totalDebt = "0",
+  ethPrice = "2000"
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [amount, setAmount] = useState("");
+
+  // Calculate new health factor after adding collateral
+  const calculateNewHealthFactor = () => {
+    if (!amount || parseFloat(amount) <= 0) return parseFloat(currentHealthFactor);
+    
+    const addAmount = parseFloat(amount);
+    const currentCollateral = parseFloat(totalCollateral);
+    const currentDebt = parseFloat(totalDebt);
+    const price = parseFloat(ethPrice);
+    
+    if (currentDebt <= 0) return Number.MAX_SAFE_INTEGER;
+    
+    // Convert ETH to USD value
+    const collateralValueUsd = currentCollateral * price;
+    const addValueUsd = addAmount * price;
+    const newCollateralValueUsd = collateralValueUsd + addValueUsd;
+    
+    // Health Factor = (Collateral Value * Liquidation Threshold) / Debt Value
+    // Using 85% liquidation threshold (0.85)
+    const liquidationThreshold = 0.85;
+    const newHealthFactor = (newCollateralValueUsd * liquidationThreshold) / currentDebt;
+    
+    return newHealthFactor;
+  };
+
+  const newHealthFactor = calculateNewHealthFactor();
+  const isHealthFactorTooLow = newHealthFactor < 1.5;
+  const isHealthFactorWarning = newHealthFactor < 2.0 && newHealthFactor >= 1.5;
+  const isHealthFactorImproving = newHealthFactor > parseFloat(currentHealthFactor);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,9 +113,34 @@ export const AddCollateralModal: React.FC<AddCollateralModalProps> = ({
             <div className="text-sm text-white/80 mb-2">
               <span className="font-semibold">Available:</span> {maxAmount} ETH
             </div>
-            <div className="text-sm text-white/80">
-              <span className="font-semibold">Max:</span> {maxAmount} ETH
+            <div className="text-sm text-white/80 mb-2">
+              <span className="font-semibold">Current Health Factor:</span> {parseFloat(currentHealthFactor).toFixed(2)}
             </div>
+            {amount && parseFloat(amount) > 0 && (
+              <div className={`text-sm mb-2 ${
+                isHealthFactorTooLow ? 'text-error' : 
+                isHealthFactorWarning ? 'text-warning' : 
+                isHealthFactorImproving ? 'text-success' : 
+                'text-white/80'
+              }`}>
+                <span className="font-semibold">New Health Factor:</span> {newHealthFactor.toFixed(2)}
+                {isHealthFactorTooLow && (
+                  <span className="block text-xs text-error mt-1">
+                    ⚠️ Health Factor will be below 1.5 - Risk of liquidation!
+                  </span>
+                )}
+                {isHealthFactorWarning && (
+                  <span className="block text-xs text-warning mt-1">
+                    ⚠️ Health Factor will be below 2.0 - High risk of liquidation!
+                  </span>
+                )}
+                {isHealthFactorImproving && !isHealthFactorTooLow && !isHealthFactorWarning && (
+                  <span className="block text-xs text-success mt-1">
+                    ✅ Health Factor will improve!
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">

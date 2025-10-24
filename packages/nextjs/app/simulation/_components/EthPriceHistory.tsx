@@ -18,7 +18,7 @@ export const EthPriceHistory: React.FC<EthPriceHistoryProps> = ({ priceHistory }
   
   if (priceHistory.length === 0) {
     return (
-      <SectionCard title="ETH Price History" className="h-full">
+      <SectionCard title="ETH Price History (MOCK)" className="h-full">
         <div className="text-center py-8">
           <p className="text-white/70">No price updates yet</p>
           <p className="text-sm text-white/50">Update ETH price to see history</p>
@@ -58,7 +58,7 @@ export const EthPriceHistory: React.FC<EthPriceHistoryProps> = ({ priceHistory }
   const areaPath = `${pathData} L ${points[points.length - 1].x} ${chartHeight - padding} L ${padding} ${chartHeight - padding} Z`;
 
   return (
-    <SectionCard title="ETH Price History" className="h-full">
+    <SectionCard title="ETH Price History (MOCK)" className="h-full">
       <div className="space-y-4">
         {/* Chart */}
         <div className="bg-base-200/30 rounded-lg p-2 relative">
