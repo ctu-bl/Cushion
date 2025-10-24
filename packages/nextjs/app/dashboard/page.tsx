@@ -65,18 +65,14 @@ export default function DashboardPage() {
       <div className="container mx-auto">
         <h1 className="text-4xl font-bold mb-6 text-white">Dashboard</h1>
         
-        {/* Account Information */}
-        <div className="mb-8">
+        {/* Account Information and Take Loan Section - Side by Side */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AccountInfo 
             address={simulationData.address} 
             mockUSDCBalance={simulationData.mockUSDCBalance as bigint | undefined} 
             mockPYUSDBalance={simulationData.mockPYUSDBalance as bigint | undefined} 
             mockWETHBalance={simulationData.mockWETHBalance as bigint | undefined} 
           />
-        </div>
-
-        {/* Take Loan Section */}
-        <div className="mb-8">
           <TakeLoanSection
             borrowAmount={actions.borrowAmount}
             collateralAmount={actions.collateralAmount}

@@ -2,7 +2,6 @@
 
 import React from "react";
 import SectionCard from "../_components/SectionCard";
-import { EtherInput } from "~~/components/scaffold-eth/Input/EtherInput";
 
 type TakeLoanSectionProps = {
   borrowAmount: string;
@@ -24,32 +23,40 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
   wrapperAddress,
 }) => (
   <SectionCard title="Take Loan via Cushion" className="h-full">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text text-white">Borrow Amount (USDC)</span>
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={borrowAmount}
-          onChange={(e) => setBorrowAmount(e.target.value)}
-          placeholder="1000"
-          className="input input-bordered text-white"
-        />
-      </div>
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text text-white">Collateral Amount (ETH)</span>
-        </label>
-        <input
-          type="text"
-          value={collateralAmount}
-          onChange={(e) => setCollateralAmount(e.target.value)}
-          placeholder="1.0"
-          className="input input-bordered text-white"
-        />
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text text-white">Borrow Amount (USDC)</span>
+          </label>
+          <div className="mt-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={borrowAmount}
+              onChange={(e) => setBorrowAmount(e.target.value)}
+              placeholder="1000"
+              className="input input-bordered text-white bg-base-200 w-full"
+            />
+          </div>
+        </div>
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text text-white">Collateral Amount (ETH)</span>
+          </label>
+          <div className="mt-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9.]*"
+              value={collateralAmount}
+              onChange={(e) => setCollateralAmount(e.target.value)}
+              placeholder="1.0"
+              className="input input-bordered text-white bg-base-200 w-full"
+            />
+          </div>
+        </div>
       </div>
       <div className="form-control">
         <button className="btn btn-primary w-full" onClick={onWrapLoan}>
