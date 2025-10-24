@@ -12,6 +12,7 @@ import PoolAssets from "./_components/PoolAssets";
 import MockControls from "./_components/MockControls";
 import MyLoanSection from "./_components/MyLoanSection";
 import EthPriceSimulator from "./_components/EthPriceSimulator";
+import EthPriceHistory from "./_components/EthPriceHistory";
 import RegistryInfo from "./_components/RegistryInfo";
 import VaultControls from "./_components/VaultControls";
 
@@ -122,6 +123,12 @@ export default function SimulationPage() {
             setNewEthPrice={ethPriceData.setNewEthPrice} 
             isUpdatingPrice={ethPriceData.isUpdatingPrice} 
             onUpdatePrice={ethPriceData.handleEthPriceUpdate} 
+          />
+        </div>
+
+        <div className="mb-8">
+          <EthPriceHistory 
+            priceHistory={ethPriceData.priceHistory}
           />
         </div>
 
