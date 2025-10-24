@@ -6,7 +6,7 @@ import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {DataTypes} from "@aave/core-v3/contracts/protocol/libraries/types/DataTypes.sol";
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 import {LoanWrapper} from "./LoanWrapper.sol";
-
+import {console} from "hardhat/console.sol";
 
 interface IWETH9 {
     function deposit() external payable;    // ETH -> WETH
@@ -85,10 +85,10 @@ contract LoanWrapperRegistry {
     function wrapLoan(address borrower, uint256 borrowedAmount) external payable {
         require(WETH!=address(0) && USDC!=address(0), LoanWrapperRegistry__AssetsNotSet());
         require(msg.value > 0, LoanWrapperRegistry__NoETHSent());
-
+        uint256 fee = msg.value * 3 / 100;
         address wrapper = wrapperOf[borrower];
         if (wrapper == address(0)) {
-            LoanWrapper newWrapper = new LoanWrapper(borrower, msg.value, borrowedAmount, vault, WETH, USDC, address(provider));
+            LoanWrapper newWrapper = new LoanWrapper(borrower, msg.value - fee, borrowedAmount, vault, WETH, USDC, address(provider));
             wrapper = address(newWrapper);
             wrapperOf[borrower] = wrapper;
             allWrappers.push(wrapper);
@@ -100,7 +100,7 @@ contract LoanWrapperRegistry {
         IPool pool = IPool(provider.getPool());
 
         // ETH -> WETH
-        uint256 fee = msg.value * 3 / 100;
+        
         (bool success, ) = payable(vault).call{value: fee}("");
         if (!success) {
             revert LoanWrapperRegistry__TransferFailed();
@@ -108,8 +108,8 @@ contract LoanWrapperRegistry {
         IVault(vault).transferFee();
         IWETH9(WETH).deposit{value: msg.value - fee}();
 
-        IERC20(WETH).approve(address(pool), msg.value);
-        pool.deposit(WETH, msg.value, wrapper, 0);
+        IERC20(WETH).approve(address(pool), msg.value - fee);
+        pool.deposit(WETH, msg.value - fee, wrapper, 0);
 
         // borrow USDC on behalf of wrapper (onBehalfOf = wrapper)
         pool.borrow(USDC, borrowedAmount, 2, 0, wrapper); // 2 = VARIABLE

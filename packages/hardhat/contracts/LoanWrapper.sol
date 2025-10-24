@@ -200,7 +200,6 @@ contract LoanWrapper is Ownable {
         if (msg.sender == owner() && locked) {
             revert LoanWrapper__WrapperNotUnlocked();
         }
-        // Conversions?
         if (amount <= 0 || (amount > s_initCollateral) && msg.sender == owner()) {
             revert LoanWrapper__InvalidAmount();
         }
@@ -343,8 +342,10 @@ contract LoanWrapper is Ownable {
         emit DebtDecreased(address(this), s_borrowedAmount);
     }
 
-    /// @notice This function can be called ONLY AND ONLY if there is sufficient balance
-    // in the Vault to repay the loan
+    /**
+     * @notice This function can be called ONLY AND ONLY if there is sufficient balance
+     * in the Vault to repay the loan
+     */ 
     function repayLoan() external payable onlyOwnerOrVault {        
         // --Checks--
         if (msg.sender == owner() && locked){
@@ -359,7 +360,7 @@ contract LoanWrapper is Ownable {
         IERC20(DEBT_TOKEN_ADDR).approve(address(PROVIDER.getPool()), s_borrowedAmount);
         
         if (msg.sender == owner()) {
-            IERC20(DEBT_TOKEN_ADDR).transfer(msg.sender, s_borrowedAmount);
+            IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), s_borrowedAmount);
         }
         
         IPool pool = IPool(PROVIDER.getPool());
