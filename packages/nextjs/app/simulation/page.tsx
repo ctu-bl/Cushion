@@ -208,6 +208,13 @@ export default function SimulationPage() {
             onInject={(wrapper) => actions.handleVaultAction("injectToLoan", wrapper)}
             onWithdraw={(wrapper) => actions.handleVaultAction("withdrawFromLoan", wrapper)}
             onLiquidate={(wrapper) => actions.handleVaultAction("liquidate", wrapper)}
+            userWrapperAddress={simulationData.userWrapperAddress as string | undefined}
+            isLocked={Boolean(wrapperData.isLocked)}
+            healthFactor={wrapperData.healthFactor as bigint | undefined}
+            totalCollateral={wrapperData.totalCollateral as bigint | undefined}
+            totalDebt={wrapperData.totalDebt as bigint | undefined}
+            investorCollateral={wrapperData.investorCollateral as bigint | undefined}
+            ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
           />
         </div>
 
