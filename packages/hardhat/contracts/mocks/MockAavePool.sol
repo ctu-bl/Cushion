@@ -87,7 +87,7 @@ abstract contract MockPool is IPool {
 
         uint256 healthFactor = amount == 0
             ? type(uint256).max
-            : (collateralUsd_e6 * 85 * 1e16) / amount * 1e3;
+            : (collateralUsd_e6 * 85 * 1e16) / amount;
         require(healthFactor >= 120 * 1e16, "Can't borrow with HF < 1");
         lastBorrowAsset = asset;
         lastBorrowAmount = amount;
