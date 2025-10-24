@@ -10,7 +10,6 @@ type AccountInfoProps = {
   address?: string;
   mockUSDCBalance?: bigint;
   mockPYUSDBalance?: bigint;
-  mockWETHBalance?: bigint;
 };
 
 // Dekomponované komponenty
@@ -64,8 +63,7 @@ const EthBalanceSection: React.FC<{ address?: string }> = ({ address }) => (
 const TokenBalancesSection: React.FC<{
   mockUSDCBalance?: bigint;
   mockPYUSDBalance?: bigint;
-  mockWETHBalance?: bigint;
-}> = ({ mockUSDCBalance, mockPYUSDBalance, mockWETHBalance }) => (
+}> = ({ mockUSDCBalance, mockPYUSDBalance }) => (
   <>
     <StatBox label="Mock USDC Balance">
       <MockTokenBalance 
@@ -83,32 +81,33 @@ const TokenBalancesSection: React.FC<{
         precision={2} 
       />
     </StatBox>
-    <StatBox label="Mock WETH Balance">
-      <MockTokenBalance 
-        balance={mockWETHBalance} 
-        decimals={18} 
-        symbol="WETH" 
-        precision={4} 
-      />
-    </StatBox>
   </>
 );
 
 export const AccountInfo: React.FC<AccountInfoProps> = ({ 
   address, 
   mockUSDCBalance, 
-  mockPYUSDBalance, 
-  mockWETHBalance 
+  mockPYUSDBalance 
 }) => (
   <SectionCard title="Account Info" className="h-full">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <AddressSection address={address} />
       <EthBalanceSection address={address} />
-      <TokenBalancesSection 
-        mockUSDCBalance={mockUSDCBalance}
-        mockPYUSDBalance={mockPYUSDBalance}
-        mockWETHBalance={mockWETHBalance}
-      />
+      <StatBox label="Mock USDC Balance">
+        <MockTokenBalance 
+          balance={mockUSDCBalance} 
+          decimals={6} 
+          symbol="USDC" 
+          precision={2} 
+        />
+      </StatBox>
+      <StatBox label="Mock PYUSD Balance">
+        <MockTokenBalance 
+          balance={mockPYUSDBalance} 
+          decimals={6} 
+          symbol="PYUSD" 
+          precision={2} 
+        />
+      </StatBox>
     </div>
   </SectionCard>
 );

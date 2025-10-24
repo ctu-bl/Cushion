@@ -118,20 +118,21 @@ export const useSimulationActions = (address?: string, mockUSDCInfo?: any, mockP
     }
   };
 
-  const handleIncreaseCollateral = async (userWrapperAddress: string) => {
-    if (!collateralManageAmount || !userWrapperAddress) {
+  const handleIncreaseCollateral = async (userWrapperAddress: string, amount?: string) => {
+    const collateralAmount = amount || collateralManageAmount;
+    if (!collateralAmount || !userWrapperAddress) {
       alert("Please enter collateral amount and ensure you have a wrapper");
       return;
     }
 
     try {
-      const amount = BigInt(Math.floor(parseFloat(collateralManageAmount) * 1e18));
+      const amountBigInt = BigInt(Math.floor(parseFloat(collateralAmount) * 1e18));
       await writeWrapper({
         address: userWrapperAddress as `0x${string}`,
         abi: LOAN_WRAPPER_ABI,
         functionName: "increaseCollateral",
-        args: [amount],
-        value: amount, // Send ETH as collateral
+        args: [amountBigInt],
+        value: amountBigInt, // Send ETH as collateral
       });
       setCollateralManageAmount("");
     } catch (error) {
@@ -139,14 +140,15 @@ export const useSimulationActions = (address?: string, mockUSDCInfo?: any, mockP
     }
   };
 
-  const handleDecreaseCollateral = async (userWrapperAddress: string, isLocked: boolean, ownerCollateral?: bigint, totalCollateral?: bigint) => {
-    if (!collateralManageAmount || !userWrapperAddress) {
+  const handleDecreaseCollateral = async (userWrapperAddress: string, isLocked: boolean, ownerCollateral?: bigint, totalCollateral?: bigint, amount?: string) => {
+    const collateralAmount = amount || collateralManageAmount;
+    if (!collateralAmount || !userWrapperAddress) {
       alert("Please enter collateral amount and ensure you have a wrapper");
       return;
     }
 
     try {
-      const amount = BigInt(Math.floor(parseFloat(collateralManageAmount) * 1e18));
+      const amount = BigInt(Math.floor(parseFloat(collateralAmount) * 1e18));
 
       // Validation checks
       if (isLocked) {
@@ -195,19 +197,20 @@ export const useSimulationActions = (address?: string, mockUSDCInfo?: any, mockP
     }
   };
 
-  const handleIncreaseDebt = async (userWrapperAddress: string) => {
-    if (!debtAmount || !userWrapperAddress) {
+  const handleIncreaseDebt = async (userWrapperAddress: string, amount?: string) => {
+    const debtAmountValue = amount || debtAmount;
+    if (!debtAmountValue || !userWrapperAddress) {
       alert("Please enter debt amount and ensure you have a wrapper");
       return;
     }
 
     try {
-      const amount = BigInt(Math.floor(parseFloat(debtAmount) * 1e6));
+      const amountBigInt = BigInt(Math.floor(parseFloat(debtAmountValue) * 1e6));
       await writeWrapper({
         address: userWrapperAddress as `0x${string}`,
         abi: LOAN_WRAPPER_ABI,
         functionName: "increaseDebt",
-        args: [amount]
+        args: [amountBigInt]
       });
       setDebtAmount("");
     } catch (error) {
@@ -215,32 +218,33 @@ export const useSimulationActions = (address?: string, mockUSDCInfo?: any, mockP
     }
   };
 
-  const handleDecreaseDebt = async (userWrapperAddress: string) => {
-    if (!debtAmount || debtAmount.trim() === "" || !userWrapperAddress) {
+  const handleDecreaseDebt = async (userWrapperAddress: string, amount?: string) => {
+    const debtAmountValue = amount || debtAmount;
+    if (!debtAmountValue || debtAmountValue.trim() === "" || !userWrapperAddress) {
       alert("Please enter debt amount and ensure you have a wrapper");
       return;
     }
 
-    const parsedAmount = parseFloat(debtAmount);
+    const parsedAmount = parseFloat(debtAmountValue);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       alert("Please enter a valid debt amount greater than 0");
       return;
     }
 
     try {
-      const amount = BigInt(Math.floor(parsedAmount * 1e6));
+      const amountBigInt = BigInt(Math.floor(parsedAmount * 1e6));
       
       // First approve USDC spending for the wrapper
       await writeMockUSDC({
         functionName: "approve",
-        args: [userWrapperAddress, amount],
+        args: [userWrapperAddress, amountBigInt],
       });
       
       await writeWrapper({
         address: userWrapperAddress as `0x${string}`,
         abi: LOAN_WRAPPER_ABI,
         functionName: "decreaseDebt",
-        args: [amount]
+        args: [amountBigInt]
       });
       setDebtAmount("");
     } catch (error) {

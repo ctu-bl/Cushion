@@ -194,7 +194,7 @@ export default function Home() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4 text-base-content">How Cushion Works</h2>
             <p className="text-lg text-base-content/70 max-w-2xl mx-auto">
-              Earn yield while providing liquidation insurance for Aave borrowers. Automated protection that works 24/7.
+              Cushion lowers liquidation risk on Aave by wrapping each user into a per-borrower LoanWrapper and managing the position for them.
             </p>
           </div>
 
@@ -211,10 +211,9 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-base-content">Automated Protection</h3>
+              <h3 className="text-2xl font-bold mb-4 text-base-content">Preemptive Defense</h3>
               <p className="text-base-content leading-relaxed">
-                Our keepers monitor your health factor 24/7 and automatically inject pyUSD when needed to prevent
-                liquidation.
+                Monitors Health Factor and tops up collateral before liquidators to keep loans alive.
               </p>
             </div>
 
@@ -230,10 +229,9 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-base-content">Earn Passive Yield</h3>
+              <h3 className="text-2xl font-bold mb-4 text-base-content">Isolated Accounts</h3>
               <p className="text-base-content leading-relaxed">
-                Deposit pyUSD into our vault and earn <span className="font-semibold text-accent">15% APY</span> while
-                providing liquidity insurance for the protocol.
+                Every borrower gets a dedicated wrapper for clean risk isolation and simpler repay/adjust flows.
               </p>
             </div>
 
@@ -249,10 +247,9 @@ export default function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-base-content">Reduced Losses</h3>
+              <h3 className="text-2xl font-bold mb-4 text-base-content">Earn with Cushion Vault</h3>
               <p className="text-base-content leading-relaxed">
-                Pay a small fee for protection and significantly reduce your liquidation losses if markets turn against
-                you.
+                Deposit PYUSD and earn interest on injected capital.
               </p>
             </div>
           </div>

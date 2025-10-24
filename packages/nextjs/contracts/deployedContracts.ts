@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
-      "address": "0xc9952Fc93Fa9bE383ccB39008c786b9f94eAc95d",
+      "address": "0x68B1D87F95878fE05B998F19b66F4baba5De1aed",
       "abi": [
         {
           "inputs": [
@@ -476,19 +476,6 @@ const deployedContracts = {
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "newRate",
-              "type": "uint256"
-            }
-          ],
-          "name": "InterestRateSet",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "uint256",
               "name": "newAccumulatedInterest",
               "type": "uint256"
             },
@@ -538,31 +525,6 @@ const deployedContracts = {
             }
           ],
           "name": "OwnershipTransferred",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "injection",
-              "type": "uint256"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "withdrawal",
-              "type": "uint256"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "liquidation",
-              "type": "uint256"
-            }
-          ],
-          "name": "ThresholdsSet",
           "type": "event"
         },
         {
@@ -1358,19 +1320,6 @@ const deployedContracts = {
         },
         {
           "inputs": [],
-          "name": "totalInjectedAssets",
-          "outputs": [
-            {
-              "internalType": "uint256",
-              "name": "",
-              "type": "uint256"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [],
           "name": "totalPrincipal",
           "outputs": [
             {
@@ -1416,6 +1365,13 @@ const deployedContracts = {
               "type": "bool"
             }
           ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "transferFee",
+          "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
         },
@@ -1584,7 +1540,7 @@ const deployedContracts = {
       ]
     },
     "LoanWrapperRegistry": {
-      "address": "0xDde063eBe8E85D666AD99f731B4Dbf8C98F29708",
+      "address": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
       "abi": [
         {
           "inputs": [
@@ -1872,7 +1828,7 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
-      "address": "0x3904b8f5b0F49cD206b7d5AABeE5D1F37eE15D8d",
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
       "abi": [
         {
           "anonymous": false,
@@ -2135,7 +2091,7 @@ const deployedContracts = {
       ]
     },
     "MockPYUSD": {
-      "address": "0x2Dd78Fd9B8F40659Af32eF98555B8b31bC97A351",
+      "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
       "abi": [
         {
           "anonymous": false,
@@ -2398,7 +2354,7 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
-      "address": "0x56fC17a65ccFEC6B7ad0aDe9BD9416CB365B9BE8",
+      "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
       "abi": [
         {
           "stateMutability": "payable",
@@ -2640,7 +2596,7 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
-      "address": "0xD6b040736e948621c5b6E0a494473c47a6113eA8",
+      "address": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
       "abi": [
         {
           "inputs": [
@@ -4622,7 +4578,7 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
-      "address": "0x139e1D41943ee15dDe4DF876f9d0E7F85e26660A",
+      "address": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
       "abi": [
         {
           "inputs": [
@@ -5246,7 +5202,7 @@ const deployedContracts = {
       ]
     },
     "MockEthOracle": {
-      "address": "0x2625760C4A8e8101801D3a48eE64B2bEA42f1E96",
+      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
       "abi": [
         {
           "inputs": [
@@ -5388,7 +5344,7 @@ const deployedContracts = {
       ]
     },
     "PriceConsumer": {
-      "address": "0x70eE76691Bdd9696552AF8d4fd634b3cF79DD529",
+      "address": "0x59b670e9fA9D0A427751Af201D676719a970857b",
       "abi": [
         {
           "inputs": [

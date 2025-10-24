@@ -34,7 +34,7 @@ export const GlobalSuccessBar: React.FC<GlobalSuccessBarProps> = ({
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 bg-green-500 text-white transition-all duration-300 ${
+      className={`fixed top-14 left-0 right-0 z-50 bg-green-500 text-white transition-all duration-300 ${
         isAnimating 
           ? 'translate-y-0 opacity-100' 
           : '-translate-y-full opacity-0'

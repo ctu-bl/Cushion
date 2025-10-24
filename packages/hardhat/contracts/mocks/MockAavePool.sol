@@ -5,6 +5,7 @@ pragma solidity ^0.8.30;
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 import {DataTypes} from "@aave/core-v3/contracts/protocol/libraries/types/DataTypes.sol";
+import {console} from "hardhat/console.sol";
 
 interface IERC20Like {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
@@ -66,6 +67,28 @@ abstract contract MockPool is IPool {
         require(IERC20Like(asset).balanceOf(address(this)) >= amount, "insufficient liquidity");
         // transfer USDC from pool to borrower
         require(IERC20Like(asset).transfer(msg.sender, amount), "borrow transfer failed");
+        int256 priceInt = IMockEthOracle(ethOracle).latestAnswer();
+        uint256 price = uint256(priceInt);
+        uint256 col = collateralByUser[onBehalfOf];
+        uint256 hf = col * 85 / amount * 1e2;
+
+        int256 ethPriceInt = IMockEthOracle(ethOracle).latestAnswer();
+        uint8 ethPriceDecimals = IMockEthOracle(ethOracle).decimals();
+        uint256 ethPrice = uint256(ethPriceInt);
+    
+        uint256 ethPriceUsd_e6;
+        if (ethPriceDecimals >= 6) {
+            ethPriceUsd_e6 = ethPrice / (10 ** (ethPriceDecimals - 6));
+        } else {
+            ethPriceUsd_e6 = ethPrice * (10 ** (6 - ethPriceDecimals));
+        }
+        
+        uint256 collateralUsd_e6 = (col * ethPriceUsd_e6) / 1e18;
+
+        uint256 healthFactor = amount == 0
+            ? type(uint256).max
+            : (collateralUsd_e6 * 85 * 1e16) / amount * 1e3;
+        require(healthFactor >= 120 * 1e16, "Can't borrow with HF < 1");
         lastBorrowAsset = asset;
         lastBorrowAmount = amount;
         lastBorrowOnBehalfOf = onBehalfOf;
