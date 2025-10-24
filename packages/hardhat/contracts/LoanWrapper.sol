@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.30;
 
-import "hardhat/console.sol";
+// import {console} from "hardhat/console.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -24,14 +24,14 @@ interface IWETH9 {
 
 /**
  * @title LoanWrapper
- * @author Ondřej Palouš
- * @notice ERC721 wrapper for loan taken on Over-Collateralized lending/borrowing protocol
+ * @author CTU Blockchain Lab
+ * @notice Custom wrapper for loan taken on Over-Collateralized lending/borrowing protocol
  * @notice The owner of this contract is the user who took the loan
  * This contract acts as an "middle-man" between the owner (user that took the loan) and the protocol.
- * As the Health Factor goes under certain threshold, the owner loses the control over the loan and is managed by 3rd party or Vault
+ * As the Health Factor drops below certain threshold, the owner loses the control over the loan and is managed by whitelisted 3rd party (Vault)
  * @notice When the Health Factor gets back to normal, user can request his permissions back
  
- * @dev Uses OpenZeppelin library for ERC721 and Ownable implementation
+ * @dev Uses OpenZeppelin library for Ownable implementation
  */
 contract LoanWrapper is Ownable {
     // ------------------ERRORS------------------
@@ -72,8 +72,6 @@ contract LoanWrapper is Ownable {
     bool private isActive = false;
 
     // ------------------EVENTS------------------
-
-
     /// @notice Emitted when the collateral is increased by the user or 3rd party (or Vault)
     event CollateralIncreased(address indexed loanAddress, address indexed performedBy, uint256 indexed newAmount);
     
@@ -92,14 +90,13 @@ contract LoanWrapper is Ownable {
     /// @notice Emitted when the user is granted access to the wrapper again
     event WrapperUnlocked(address indexed loanAddress);
 
+    /// @notice Emitted when loan is repaid
     event LoanRepaid(address indexed loanAddress);
 
     // ------------------CONSTRUCTOR------------------
     /**
-     * @notice Constructs the wrapper as an ERC721 collection. The owner is the userthat took the loan
-     */
-    // I'm not sure this will work. Maybe there should be transferOwnership in constructor
-    // and initial owner should be msg.sender -> Registry
+     * @notice Constructs the wrapper. The owner is the user that took the loan
+    */
     constructor(address owner, uint256 collateral, uint256 amount, address vault,
     address colTokenAddr, address debtTokenAddr, address provider)
     Ownable(owner) {
@@ -116,6 +113,7 @@ contract LoanWrapper is Ownable {
             msg.sender,
             amount
         );
+        isActive = true;
         }
 
     // ------------------MODIFIERS------------------
@@ -152,8 +150,6 @@ contract LoanWrapper is Ownable {
         _;
     }
 
-    // ------------------PUBLIC FUNCTIONS------------------
-
     // ------------------EXTERNAL AND VIEW FUNCTIONS------------------
     /**
      * @notice Increases the collateral associated with the loan. HF should increase
@@ -182,10 +178,12 @@ contract LoanWrapper is Ownable {
         } else {
             s_initCollateral += amount;
         }
+
+        // --Interactions--
         IWETH9(COL_TOKEN_ADDR).deposit{value: msg.value}();
         IERC20(COL_TOKEN_ADDR).approve(address(pool), msg.value);
         pool.deposit(COL_TOKEN_ADDR, amount, address(this), 0);
-        // --Interactions--
+        
         emit CollateralIncreased(address(this), msg.sender, amount);
     }
 
@@ -209,9 +207,7 @@ contract LoanWrapper is Ownable {
         if ((amount > s_investorCollateral)  && msg.sender == s_investor) {
             revert LoanWrapper__InvalidAmount();
         }
-        // Normalize collateral change into the same base as getUserAccountData returns.
-        // Pokud pool vrací hodnoty v 1e18 "USD" bázi, je potřeba použít cenový faktor.
-        // V mocku používáme fixní 1 WETH = 2000 USDC, tedy přepočet ~2000x.
+        
         int256 negativeCol = -int256(amount) * int256(2000);
         IPool pool = IPool(PROVIDER.getPool());
         (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
@@ -224,19 +220,19 @@ contract LoanWrapper is Ownable {
 
         // ---- Effects (update local accounting) ----
         if (msg.sender == s_investor) {
-            // safe subtraction; validated above that amount <= s_investorCollateral
             s_investorCollateral = s_investorCollateral - amount;
             s_investor = address(0);
             unlockWrapper();
         } else {
-            // safe subtraction; validated above for owner path
             s_initCollateral = s_initCollateral - amount;
         }
 
         // ---- Interactions (unwrap and payout) ----
         IWETH9(COL_TOKEN_ADDR).withdraw(amount);
         (bool success, ) = payable(msg.sender).call{value: amount}("");
-        if (!success) revert LoanWrapper__WithdrawFailed();
+        if (!success) {
+            revert LoanWrapper__WithdrawFailed();
+        }
 
         emit CollateralDecreased(address(this), msg.sender, amount);
     }
@@ -245,11 +241,11 @@ contract LoanWrapper is Ownable {
      * @notice Decreases collateral for Vault operations (withdraws specific amounts from both user and investor collateral)
      * @param investorAmount Amount of investor collateral to withdraw
      * @param userAmount Amount of user collateral to withdraw
+     *
      * @dev Only callable by Vault
      */
     function decreaseCollateralForVault(uint256 investorAmount, uint256 userAmount) external onlyOwnerOrVault {
         // --Checks--
-        
         uint256 totalAmount = investorAmount + userAmount;
         if (totalAmount <= 0) {
             revert LoanWrapper__InvalidAmount();
@@ -264,10 +260,7 @@ contract LoanWrapper is Ownable {
         }
         
         // Check Health Factor
-       IPool pool = IPool(PROVIDER.getPool());
-
-
-        console.log("Loandwithdrawing from aaave");
+        IPool pool = IPool(PROVIDER.getPool());
         
         // ---- Interactions (withdraw WETH from Aave pool to this wrapper) ----
         uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR, totalAmount, address(this));
@@ -275,7 +268,6 @@ contract LoanWrapper is Ownable {
 
         // ---- Effects (update local accounting) ----
         if (investorAmount > 0) {
-            // safe subtraction; validated above
             s_investorCollateral = s_investorCollateral - investorAmount;
             if (s_investorCollateral == 0) {
                 s_investor = address(0);
@@ -283,19 +275,12 @@ contract LoanWrapper is Ownable {
             }
         }
         if (userAmount > 0) {
-            // safe subtraction; validated above
             s_initCollateral = s_initCollateral - userAmount;
         }
 
         // ---- Interactions (unwrap and payout) ----
-        console.log("LoanWrapper: withdrawing WETH amount:", totalAmount);
-        console.log("LoanWrapper: WETH balance before withdraw:", IERC20(COL_TOKEN_ADDR).balanceOf(address(this)));
         IWETH9(COL_TOKEN_ADDR).withdraw(totalAmount);
-        console.log("LoanWrapper: WETH withdrawn, sending ETH to:", msg.sender);
-        console.log("LoanWrapper: ETH balance before send:", address(this).balance);
         (bool success, ) = payable(msg.sender).call{value: totalAmount}("");
-        console.log("LoanWrapper: ETH send success:", success);
-        console.log("LoanWrapper: ETH balance after send:", address(this).balance);
         if (!success) revert LoanWrapper__WithdrawFailed();
 
         emit CollateralDecreased(address(this), msg.sender, totalAmount);
@@ -314,19 +299,21 @@ contract LoanWrapper is Ownable {
         if (amount <= 0) {
             revert LoanWrapper__InvalidAmount();
         }
-        // Normalizace dluhu do stejné báze (USDC 1e6 -> 1e18 = *1e12)
+        
         int256 positiveAmount = int256(amount) * int256(1e12);
         IPool pool = IPool(PROVIDER.getPool());
         (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
         if (computeHF(col, debt, lt, 0, positiveAmount) < LOCKING_THRESHOLD) {
             revert LoanWrapper__BreaksHealthFactor();
         }
+
         // --Effects--
-        
+        s_borrowedAmount += amount;
+
+        // --Interactions--
         pool.borrow(DEBT_TOKEN_ADDR, amount, 2, 0, address(this));
         IERC20(DEBT_TOKEN_ADDR).transfer(owner(), amount);
-        s_borrowedAmount += amount;
-        // --Interactions--
+        
         emit DebtIncreased(address(this), s_borrowedAmount);
     }
 
@@ -339,97 +326,85 @@ contract LoanWrapper is Ownable {
      */
     function decreaseDebt(uint256 amount) external onlyOwner wrapperUnlocked {
         // --Checks--
-        // Conversions?
         if (amount <= 0 || amount > s_borrowedAmount) {
             revert LoanWrapper__InvalidAmount();
         }
 
         // --Effects--
+        // --Interactions--
         IERC20(DEBT_TOKEN_ADDR).approve(address(PROVIDER.getPool()), amount);
         IERC20(DEBT_TOKEN_ADDR).transferFrom(msg.sender, address(this), amount);
         IPool pool = IPool(PROVIDER.getPool());
         pool.repay(DEBT_TOKEN_ADDR, amount, 2, address(this));
+        // Effect happens after an interaction in this specific scenario
         s_borrowedAmount -= amount;
-        // --Interactions--
+
+        
         emit DebtDecreased(address(this), s_borrowedAmount);
     }
+
     /// @notice This function can be called ONLY AND ONLY if there is sufficient balance
     // in the Vault to repay the loan
-    function repayLoan() external payable onlyOwnerOrVault {
-        console.log("=== REPAY LOAN FUNCTION START ===");
-        console.log("Loan wrapper address:", address(this));
-        console.log("Borrowed amount:", s_borrowedAmount);
-        console.log("Initial collateral:", s_initCollateral);
-        console.log("Investor collateral:", s_investorCollateral);
-        console.log("Total collateral:", s_initCollateral + s_investorCollateral);
-        console.log("Is active:", isActive);
-        console.log("Is locked:", locked);
-        
+    function repayLoan() external payable onlyOwnerOrVault {        
         // --Checks--
         if (msg.sender == owner() && locked){
-            console.log("ERROR: Wrapper is locked for owner");
             revert LoanWrapper__WrapperNotUnlocked();
         }
         if (s_borrowedAmount <= 0) {
-            console.log("ERROR: Nothing to repay");
             revert LoanWrapper__NothingToRepay();
         }
 
         // --Effects--
-        console.log("Approving pool to spend USDC tokens");
-        console.log("Pool address:", address(PROVIDER.getPool()));
-        console.log("USDC amount to approve:", s_borrowedAmount);
-        
         // Approve pool to spend USDC tokens for repayment
         IERC20(DEBT_TOKEN_ADDR).approve(address(PROVIDER.getPool()), s_borrowedAmount);
         
-        console.log("Transferring USDC from sender to loan wrapper");
-        console.log("USDC balance before transfer:", IERC20(DEBT_TOKEN_ADDR).balanceOf(address(this)));
         if (msg.sender == owner()) {
             IERC20(DEBT_TOKEN_ADDR).transfer(msg.sender, s_borrowedAmount);
         }
-
-        
-        console.log("USDC balance after transfer:", IERC20(DEBT_TOKEN_ADDR).balanceOf(address(this)));
         
         IPool pool = IPool(PROVIDER.getPool());
-        console.log("Calling pool.repay with max amount");
-        // Hopefully type(uint256).max is correct. It was in repay() desc on AAVE
         pool.repay(DEBT_TOKEN_ADDR, type(uint256).max, 2, address(this));
-        console.log("Pool repay completed");
         
         s_borrowedAmount = 0;
-        console.log("Borrowed amount reset to 0");
         
         isActive = false;
         uint256 coll = s_initCollateral + s_investorCollateral;
-        console.log("Total collateral to withdraw:", coll);
         
         s_initCollateral = 0;
         s_investorCollateral = 0;
-        console.log("Collateral amounts reset to 0");
         
-        console.log("Withdrawing collateral from pool");
+        // --Interactions--
         uint256 withdrawn = pool.withdraw(COL_TOKEN_ADDR, coll, address(this));
-        console.log("Collateral withdrawn from pool:", withdrawn);
         
-        console.log("Unwrapping WETH to ETH");
         IWETH9(COL_TOKEN_ADDR).withdraw(withdrawn);
-        console.log("WETH unwrapped, ETH balance:", address(this).balance);
         
-        console.log("Sending ETH to sender");
         (bool success, ) = payable(msg.sender).call{value: withdrawn}("");
         if (!success) {
-            console.log("ERROR: ETH transfer failed");
             revert LoanWrapper__WithdrawFailed();
         }
-        console.log("ETH sent successfully to:", msg.sender);
-        console.log("=== REPAY LOAN FUNCTION END ===");
         
         emit LoanRepaid(address(this));
     }
 
-    /// @notice Getter for state variable {locked}
+    /**
+     * @notice Calculates current Health Factor for this wrapper using pool data.
+     *
+     * @dev Uses the same formula as computeHF with zero pending deltas.
+     */
+    function calculatedHF() external view returns (uint256) {
+        IPool pool = IPool(PROVIDER.getPool());
+        (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
+        return computeHF(col, debt, lt, 0, 0);
+    }
+
+    function setActive() external onlyOwnerOrVault {
+        isActive = true;
+    }
+
+    function getIsActive() external view returns (bool) {
+        return isActive;
+    }
+
     function isLocked() external view returns (bool) {
         return locked;
     }
@@ -453,7 +428,6 @@ contract LoanWrapper is Ownable {
     receive() external payable {}
 
     // ------------------PRIVATE AND INTERNAL FUNCTIONS------------------
-    // Can be merged into one function... What is better approach?
     function lockWrapper() private {
         // --Checks--
         // No checks
@@ -472,7 +446,15 @@ contract LoanWrapper is Ownable {
         emit WrapperUnlocked(address(this));
     }
 
-    
+    /**
+     * @notice Computes potential HF of the current wrapper by collateralChange or debtChange
+     * @param totalCollateralBase Amount of tokens that user provided as collateral
+     * @param totalDebtBase Amount of debt tokens that user already borrowed
+     * @param currentLiquidationThreshold Maximum percentage of collateral value that
+     * can be borrowed before liquidation risk begins
+     * @param collateralChange Amount of collateral token to add/subtract from the current base
+     * @param debtChange Amount of debt token to add/subtract from the current base
+     */
     function computeHF(
         uint256 totalCollateralBase,
         uint256 totalDebtBase,
@@ -492,7 +474,10 @@ contract LoanWrapper is Ownable {
         return hf;
     }
 
-    function testComputeHF(
+    /**
+     * @notice Test function -> not used in this project
+     */
+    /*function testComputeHF(
         uint256 totalCollateralBase,
         uint256 totalDebtBase,
         uint256 currentLiquidationThreshold,
@@ -500,19 +485,5 @@ contract LoanWrapper is Ownable {
         int256 debtChange
     ) public pure returns (uint256) {
         return computeHF(totalCollateralBase, totalDebtBase, currentLiquidationThreshold, collateralChange, debtChange);
-    }
-
-    function setActive() external onlyOwnerOrVault {
-        isActive = true;
-    }
-
-    /**
-     * @notice Calculates current Health Factor for this wrapper using pool data.
-     * @dev Uses the same formula as computeHF with zero pending deltas.
-     */
-    function calculatedHF() external view returns (uint256) {
-        IPool pool = IPool(PROVIDER.getPool());
-        (uint256 col, uint256 debt, , uint256 lt, ,) = pool.getUserAccountData(address(this));
-        return computeHF(col, debt, lt, 0, 0);
-    }
+    }*/
 }

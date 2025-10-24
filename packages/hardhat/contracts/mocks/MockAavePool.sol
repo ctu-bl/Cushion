@@ -66,6 +66,9 @@ abstract contract MockPool is IPool {
         require(IERC20Like(asset).balanceOf(address(this)) >= amount, "insufficient liquidity");
         // transfer USDC from pool to borrower
         require(IERC20Like(asset).transfer(msg.sender, amount), "borrow transfer failed");
+        uint256 col = collateralByUser[onBehalfOf];
+        uint256 hf = col * 85 / amount * 1e2;
+        require(hf >= 1e18, "Can't borrow with HF < 1");
         lastBorrowAsset = asset;
         lastBorrowAmount = amount;
         lastBorrowOnBehalfOf = onBehalfOf;

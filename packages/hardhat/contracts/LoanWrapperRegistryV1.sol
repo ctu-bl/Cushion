@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
@@ -21,18 +22,25 @@ interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
 }
 
+interface IVault {
+    function transferFee() external;
+}
+
+interface ILoanWrapper {
+    function getIsActive() external view returns (bool);
+}
+
 /**
  * @title LoanWrapperRegistry
- * @author CtuBlockhain Lab
- * @notice Factory & registry for per-borrower LoanWrapper contracts (each acts as its own Aave user).
- * @dev Uses PoolAddressesProvider to resolve Aave Pool. Enforces 1:1 borrowerEOA → LoanWrapper.
+ * @author CTU Blockchain Lab
+ * @notice Factory & registry for per-borrower LoanWrapper contracts 
+ * (each acts as its own lending/borrowing protocol user).
  *
  * Responsibilities:
  * - Deploy a LoanWrapper for a borrower and emit WrapperCreated.
  * - Keep borrowerEOA → wrapper mapping + index of all wrappers.
- * - Provide light view helpers (e.g., read HF via Aave) and hold no funds.
+ * - Provide light view helpers (e.g., read HF via lending/borrowing protocol) and hold no funds.
  */
-
 contract LoanWrapperRegistry {
     // ------------------ERRORS------------------
     error LoanWrapperRegistry__Undercollateralized();
@@ -43,7 +51,7 @@ contract LoanWrapperRegistry {
     error LoanWrapperRegistry__TransferFailed();
 
     // ------------------CONSTANTS------------------
-    IPoolAddressesProvider public immutable provider; // <AAVE_ADDRESSES_PROVIDER_SEPOLIA>
+    IPoolAddressesProvider public immutable provider;
     address public immutable vault;
     address public immutable WETH;         // underlying WETH
     address public immutable USDC;         // underlying USDC
@@ -61,19 +69,19 @@ contract LoanWrapperRegistry {
 
     constructor(address _provider, address _vault, address _weth, address _usdc) {
         provider = IPoolAddressesProvider(_provider);
-        vault = _vault; // může být address(0), pokud nechceš řešit locky hned
+        vault = _vault;
         WETH = _weth;
         USDC = _usdc;
     }
 
     
-
+    // --------------------EXTERNAL FUNCTIONS----------------------
     /**
-     * @notice Wrap an existing loan into a transferable ERC721
+     * @notice Wrap an existing loan into a custom wrapper
      * @param borrower Address of the borrower taking the loan (EOA)
      * @param borrowedAmount Amount of USDC the borrower wants to borrow
-     * @dev Deploys a LoanWrapper, deposits ETH collateral, borrows USDC from Aave
-    */
+     * @dev Deploys a LoanWrapper, deposits ETH collateral, borrows USDC from lending/borrowing protocol
+     */
     function wrapLoan(address borrower, uint256 borrowedAmount) external payable {
         require(WETH!=address(0) && USDC!=address(0), LoanWrapperRegistry__AssetsNotSet());
         require(msg.value > 0, LoanWrapperRegistry__NoETHSent());
@@ -91,34 +99,67 @@ contract LoanWrapperRegistry {
 
         IPool pool = IPool(provider.getPool());
 
-        // 2) ETH -> WETH (WETH se připíše registru, protože on posílá ETH)
-        IWETH9(WETH).deposit{value: msg.value}();
+        // ETH -> WETH
+        uint256 fee = msg.value * 3 / 100;
+        (bool success, ) = payable(vault).call{value: fee}("");
+        if (!success) {
+            revert LoanWrapperRegistry__TransferFailed();
+        }
+        IVault(vault).transferFee();
+        IWETH9(WETH).deposit{value: msg.value - fee}();
 
-        // 3) deposit WETH do Aave NA ÚČET WRAPPERU (onBehalfOf = wrapper)
         IERC20(WETH).approve(address(pool), msg.value);
         pool.deposit(WETH, msg.value, wrapper, 0);
 
-        // 4) borrow USDC NA ÚČET WRAPPERU (onBehalfOf = wrapper)
-        //    Pozor: underlying USDC se po borrowu pošle volajícímu (registru),
-        //    proto ho hned přepošleme borrowerovi.
+        // borrow USDC on behalf of wrapper (onBehalfOf = wrapper)
         pool.borrow(USDC, borrowedAmount, 2, 0, wrapper); // 2 = VARIABLE
 
         require(IERC20(USDC).transfer(borrower, borrowedAmount), LoanWrapperRegistry__TransferFailed());
     }
 
+    /**
+     * @notice Returns all active wrappers
+     *
+     * @dev for loop is not ideal but for POC it's not a big deal
+     */
+    function getAllWrappers() external view returns (address[] memory) {
+    uint256 activeCount = 0;
+    for (uint256 i = 0; i < allWrappers.length; i++) {
+        if (ILoanWrapper(allWrappers[i]).getIsActive()) {
+            activeCount++;
+        }
+    }
+    address[] memory allActiveWrappers = new address[](activeCount);
+    uint256 index = 0;
+    
+    for (uint256 i = 0; i < allWrappers.length; i++) {
+        if (ILoanWrapper(allWrappers[i]).getIsActive()) {
+            allActiveWrappers[index] = allWrappers[i];
+            index++;
+        }
+    }
 
+    return allActiveWrappers;
+}
 
-    function getAllWrappers() external view returns (address[] memory) { return allWrappers; }
-
+    /**
+     * @notice Returns HF of the certain loan
+     * @param wrapper Address of the wrapper associated with the loan
+     * @return hf HF of the loan
+     */
     function getHF(address wrapper) external view returns (uint256 hf) {
         require(wrapper != address(0), LoanWrapperRegistry__InvalidWrapper());
         hf = LoanWrapper(payable(wrapper)).calculatedHF();
     }
 
+    /**
+     * @notice Checks if current HF of the loan is above the liquidation threshold
+     * @param wrapper Address of the wrapper associated with the loan
+     * @return isHealthy True if HF is above threshold, false otherwise
+     */
     function checkHF(address wrapper) external view returns (bool isHealthy) {
         require(wrapper != address(0), LoanWrapperRegistry__InvalidWrapper());
         (,,,uint256 currentLiquidationThreshold,,uint256 hf) = IPool(provider.getPool()).getUserAccountData(wrapper);
         return hf > currentLiquidationThreshold; // Check if HF is above the liquidation threshold
     }
-
 }
