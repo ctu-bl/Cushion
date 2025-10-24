@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useBalance } from "wagmi";
 import { Address } from "~~/components/scaffold-eth/Address/Address";
 import StatBox from "../_components/StatBox";
 import SectionCard from "../_components/SectionCard";
@@ -14,17 +15,22 @@ type AccountInfoProps = {
 
 // Dekomponované komponenty
 const EthBalance: React.FC<{ address?: string }> = ({ address }) => {
-  const [ethBalance, setEthBalance] = React.useState<string>("0.0000");
-  
-  React.useEffect(() => {
-    if (address) {
-      // Simulace ETH balance - v reálné aplikaci by se načítalo z blockchainu
-      setEthBalance("0.9936");
-    }
-  }, [address]);
+  const { data: balance, isLoading, error } = useBalance({
+    address: address as `0x${string}`,
+  });
+
+  if (isLoading) {
+    return <span className="text-white font-mono">Loading...</span>;
+  }
+
+  if (error) {
+    return <span className="text-white font-mono">Error loading balance</span>;
+  }
+
+  const formattedBalance = balance ? Number(balance.formatted).toFixed(4) : "0.0000";
 
   return (
-    <span className="text-white font-mono">{ethBalance} ETH</span>
+    <span className="text-white font-mono">{formattedBalance} ETH</span>
   );
 };
 
