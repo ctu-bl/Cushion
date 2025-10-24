@@ -126,18 +126,20 @@ export default function SimulationPage() {
         </div>
 
         <div className="mb-8">
+          <VaultControls
+            allWrappers={simulationData.allWrappers as string[] | undefined}
+            onInject={(wrapper) => actions.handleVaultAction("injectToLoan", wrapper)}
+            onWithdraw={(wrapper) => actions.handleVaultAction("withdrawFromLoan", wrapper)}
+            onLiquidate={(wrapper) => actions.handleVaultAction("liquidate", wrapper)}
+          />
+        </div>
+
+        <div className="mb-8">
           <RegistryInfo 
             registryAddress={simulationData.registryAddress as string | undefined} 
             allWrappers={simulationData.allWrappers as string[] | undefined} 
           />
         </div>
-
-        <VaultControls
-          allWrappers={simulationData.allWrappers as string[] | undefined}
-          onInject={(wrapper) => actions.handleVaultAction("injectToLoan", wrapper)}
-          onWithdraw={(wrapper) => actions.handleVaultAction("withdrawFromLoan", wrapper)}
-          onLiquidate={(wrapper) => actions.handleVaultAction("liquidate", wrapper)}
-        />
       </div>
     </main>
   );
