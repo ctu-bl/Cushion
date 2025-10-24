@@ -2,6 +2,7 @@
 
 import React, { useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
 import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
@@ -104,15 +105,19 @@ export const Header = () => {
             <HeaderMenuLinks />
           </ul>
         </details>
-        <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
+        <Link href="/" passHref className="hidden lg:flex items-center gap-3 ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
-            <svg className="w-full h-full text-base-content drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
-            </svg>
+            <Image
+              src="/cushion_logo.jpg"
+              alt="Cushion Logo"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain"
+            />
           </div>
           <div className="flex flex-col">
             <span className="font-bold leading-tight text-base-content">Cushion</span>
-            <span className="text-xs text-base-content/60">Your financial insurance</span>
+            <span className="text-xs text-base-content/60">Your Liquidation Protection</span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap items-center px-1 gap-1">
