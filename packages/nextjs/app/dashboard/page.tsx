@@ -83,6 +83,7 @@ export default function DashboardPage() {
             onWrapLoan={actions.handleWrapLoan}
             createdWrapperAddress={actions.createdWrapperAddress}
             wrapperAddress={simulationData.userWrapperAddress as string | undefined}
+            ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals) || "2000"}
           />
         </div>
 
