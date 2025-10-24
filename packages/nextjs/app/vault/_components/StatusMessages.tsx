@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import SuccessToast from "../../_components/SuccessToast";
+import { GlobalSuccessBar } from "../../_components/GlobalSuccessBar";
 
 type StatusMessagesProps = {
   isApproveSuccess: boolean;
@@ -40,7 +40,7 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
 }) => {
   return (
     <>
-      <SuccessToast
+      <GlobalSuccessBar
         message={`Successfully approved ${approveAmount} PYUSD!`}
         isVisible={isApproveSuccess}
         onClose={onApproveClose}
@@ -71,7 +71,7 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
         </div>
       )}
 
-      <SuccessToast
+      <GlobalSuccessBar
         message={`Successfully deposited ${depositAmount} PYUSD!`}
         isVisible={isDepositSuccess}
         onClose={onDepositClose}
@@ -102,7 +102,7 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
         </div>
       )}
 
-      <SuccessToast
+      <GlobalSuccessBar
         message={`Successfully withdrew ${withdrawAmount} PYUSD!`}
         isVisible={isWithdrawSuccess}
         onClose={onWithdrawClose}

@@ -115,24 +115,22 @@ export const MyLoanSection: React.FC<MyLoanSectionProps> = ({
                 </p>
               </div>
             )}
-            <div className="flex gap-4 items-end">
+            <div className="flex gap-4 items-start">
               <div className="form-control flex-1">
-                <label className="label">
-                  <span className="label-text text-white">Amount (ETH)</span>
-                </label>
                 <input
                   type="text"
                   inputMode="decimal"
                   pattern="[0-9]*[.,]?[0-9]*"
                   value={collateralManageAmount}
                   onChange={(e) => setCollateralManageAmount(e.target.value)}
-                  placeholder="0.1"
-                  className="input input-bordered text-white"
+                  placeholder="Amount (ETH)"
+                  className="input input-bordered text-white w-full"
                 />
+                <div className="text-xs text-white/70 mt-2">Enter amount in ETH (e.g., 0.1)</div>
               </div>
               <div className="flex gap-2">
-                <button className="btn btn-primary btn-sm" onClick={onIncreaseCollateral}>Add Collateral</button>
-                <button className="btn btn-secondary btn-sm" onClick={onDecreaseCollateral}>Remove Collateral</button>
+                <button className="btn btn-primary btn-sm h-10" onClick={onIncreaseCollateral}>Add Collateral</button>
+                <button className="btn btn-secondary btn-sm h-10" onClick={onDecreaseCollateral}>Remove Collateral</button>
               </div>
             </div>
           </div>
@@ -147,24 +145,22 @@ export const MyLoanSection: React.FC<MyLoanSectionProps> = ({
               </div>
             )}
             <div className="space-y-4">
-              <div className="flex gap-4 items-end">
+              <div className="flex gap-4 items-start">
                 <div className="form-control flex-1">
-                  <label className="label">
-                    <span className="label-text text-white">Amount (USDC)</span>
-                  </label>
                   <input
                     type="text"
                     inputMode="decimal"
                     pattern="[0-9]*[.,]?[0-9]*"
                     value={debtAmount}
                     onChange={(e) => setDebtAmount(e.target.value)}
-                    placeholder="100"
-                    className="input input-bordered text-white"
+                    placeholder="Amount (USDC)"
+                    className="input input-bordered text-white w-full"
                   />
+                  <div className="text-xs text-white/70 mt-2">Enter amount in USDC (e.g., 100)</div>
                 </div>
                 <div className="flex gap-2">
-                  <button className="btn btn-accent btn-sm" onClick={onIncreaseDebt}>Borrow More</button>
-                  <button className="btn btn-warning btn-sm" onClick={onDecreaseDebt}>Repay Debt</button>
+                  <button className="btn btn-accent btn-sm h-10" onClick={onIncreaseDebt}>Borrow More</button>
+                  <button className="btn btn-warning btn-sm h-10" onClick={onDecreaseDebt}>Repay Debt</button>
                 </div>
               </div>
               <div className="flex gap-2">

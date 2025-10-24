@@ -108,10 +108,11 @@ export const Header = () => {
         <Link href="/" passHref className="hidden lg:flex items-center gap-3 ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
             <Image
-              src="/cushion_logo.jpg"
+              src="/cushion_logo_2.svg"
               alt="Cushion Logo"
               width={40}
               height={40}
+              style={{ scale: 1.6 }}
               className="w-full h-full object-contain"
             />
           </div>
