@@ -4,6 +4,7 @@
 - Node.js 18+ (LTS recommended)
 - Yarn (classic) installed globally
 - Git
+- Forge-std ()
 
 ## Clone the repository
 ```bash
@@ -14,6 +15,12 @@ cd cushion
 ## Install dependencies
 ```bash
 yarn install
+```
+
+## Install forge-std into the /lib and then move it into /node_modules
+```bash
+forge install
+cp -R lib/forge-std node_modules/forge-std
 ```
 
 ## Start local blockchain (Hardhat)

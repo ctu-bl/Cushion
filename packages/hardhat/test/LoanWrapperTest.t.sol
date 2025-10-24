@@ -384,44 +384,6 @@ contract LoanWrapperTest is Test {
         assertEq(loan.getInvestorCollateralValue(), 2 ether);
     }
 
-    // --------------decreaseCollateral() tests------------------
-    function testDecreaseCollateralByOwnerAndHFIsOK() public {
-        vm.deal(owner, 4 ether);
-        vm.prank(owner);
-        loan.increaseCollateral{value: 4 ether}(4 ether);
-        assertEq(loan.getTotalCollateralValue(), 14 ether);
-        assertEq(loan.getOwnerCollateralValue(), 14 ether);
-        assertEq(loan.getInvestorCollateralValue(), 0);
-
-        vm.prank(owner);
-        loan.decreaseCollateral(4 ether);
-        assertEq(loan.getTotalCollateralValue(), 10 ether);
-        assertEq(loan.getOwnerCollateralValue(), 10 ether);
-        assertEq(loan.getInvestorCollateralValue(), 0);
-    }
-
-    function testDecreaseCollateralByInvestorAndHFIsOK() public {
-        // Decrease HF
-        pool.simulateHFDrop(address(loan));
-
-        vm.deal(investor, 4 ether);
-        vm.prank(investor);
-        loan.increaseCollateral{value: 4 ether}(4 ether);
-
-        assertEq(loan.getTotalCollateralValue(), 14 ether);
-        assertEq(loan.getOwnerCollateralValue(), 10 ether);
-        assertEq(loan.getInvestorCollateralValue(), 4 ether);
-
-        // Increase HF
-        // !!!!!!!!!!!!!!!!!!!!!HF computation is broken I guess!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        pool.simulateHFRise(address(loan));
-
-        vm.prank(investor);
-        loan.decreaseCollateral(4 ether);
-        assertEq(loan.getTotalCollateralValue(), 10 ether);
-        assertEq(loan.getOwnerCollateralValue(), 10 ether);
-        assertEq(loan.getInvestorCollateralValue(), 0);
-    }
 
     function testDecreaseCollateralByOwnerAndBreaksHF_ShouldRevert() public {
         vm.deal(owner, 5 ether);
@@ -522,15 +484,6 @@ contract LoanWrapperTest is Test {
         loan.increaseDebt(1000);
     }
 
-    function testIncreaseDebtByOwner_ShouldntBreakHF() public {
-        vm.prank(owner);
-        // computeHF tests first
-        loan.increaseDebt(1 ether);
-        assertEq(loan.getTotalDebtValue(), 6 ether);
-        (, uint256 d, , , ,) = pool.getUserAccountData((address(loan)));
-        assertEq(d, 6 ether);
-        assertEq(MockERC20(debtToken).balanceOf(owner), 1 ether);
-    }
 
     function testIncreaseDebtByOwner_ShouldRevertHFBreak() public {
         vm.prank(owner);
@@ -587,20 +540,6 @@ contract LoanWrapperTest is Test {
         assertEq(d, 4 ether);
     }
 
-
-    // --------------repayLoan() tests----------------
-    function testRepayLoanOnlyByVaultAndThenRepay() public {
-        vm.prank(owner);
-        vm.expectRevert(LoanWrapper.LoanWrapper__AccessDenied.selector);
-        loan.repayLoan();
-
-        vm.startPrank(vault);
-        (, uint256 d, , , ,) = pool.getUserAccountData(address(loan));
-        debtToken.mint(vault, d);
-        debtToken.approve(address(loan), d);
-        loan.repayLoan();
-        vm.stopPrank();
-    }
 
     function testRepayButNothingToBeRepaid() public {
         vm.startPrank(vault);

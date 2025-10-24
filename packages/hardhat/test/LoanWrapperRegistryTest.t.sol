@@ -296,7 +296,7 @@ contract LoanWrapperRegistrySolidityTest is Test{
         registry.wrapLoan{value: ethCollateral}(borrower, borrowUSDC);
 
         address wrapper = registry.wrapperOf(borrower);
-        address indexedBorrower = LoanWrapper(wrapper).owner();
+        address indexedBorrower = LoanWrapper(payable(wrapper)).owner();
 
         require(indexedBorrower == borrower, "borrower not indexed correctly");
         require(wrapper != address(0), "wrapper not created");
@@ -319,10 +319,10 @@ contract LoanWrapperRegistrySolidityTest is Test{
         registry.wrapLoan{value: ethCollateral2}(borrower2, borrowUSDC2);
 
         address wrapper1 = registry.wrapperOf(borrower1);
-        address indexedBorrower1 = LoanWrapper(wrapper1).owner();
+        address indexedBorrower1 = LoanWrapper(payable(wrapper1)).owner();
 
         address wrapper2 = registry.wrapperOf(borrower2);
-        address indexedBorrower2 = LoanWrapper(wrapper2).owner();
+        address indexedBorrower2 = LoanWrapper(payable(wrapper2)).owner();
 
         address lastWrapper = pool.lastBorrowOnBehalfOf();
 
