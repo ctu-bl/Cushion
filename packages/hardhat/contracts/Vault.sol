@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.30;
 
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -6,13 +7,11 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import "hardhat/console.sol";
-import "./mocks/MockUniswapRouter.sol";
+// import {console} from "hardhat/console.sol";
+import {MockUniswapRouter} from "./mocks/MockUniswapRouter.sol";
 
-interface ISwapAdapter {
-    function swapPyUsdToEth(address pyusd, uint256 amountPyUsd) external returns (uint256 ethOut);
-}
 
+// Loan wrapper
 interface ILoanWrapper {
     function getTotalCollateralValue() external view returns (uint256);
     function getTotalDebtValue() external view returns (uint256);
@@ -24,6 +23,7 @@ interface ILoanWrapper {
     function repayLoan() external;
 } 
 
+// Uniswap router for token swaping
 interface ISwapRouter {
     struct ExactInputSingleParams {
         address tokenIn;
@@ -51,8 +51,9 @@ interface IChainlinkAggregator {
 
 /**
  * @title Vault
- * @author CtuBlockchain Lab
- * @notice ERC4626 vault nad PYUSD s extra per-user účetnictvím principalu v PYUSD.
+ * @author CTU Blockchain Lab
+ * @notice PYUSD powered ERC4626 Vault with provisions for liquidity providers
+ * @notice Vault also communicates with the keeper and executes its commands 
  */
 contract Vault is ERC4626, Ownable {
     using Math for uint256;
@@ -78,7 +79,7 @@ contract Vault is ERC4626, Ownable {
     IChainlinkAggregator public immutable ETH_USD_FEED;
     IChainlinkAggregator public immutable PYUSD_USD_FEED;
 
-    /// @notice roční sazba pro injected kapitál (1e18 precision).
+    /// @notice annual interest rate for injected capital (1e18 precision)
     uint256 public interestRate = 5 * 1e16; // 5%
     uint256 public SECONDS_PER_YEAR = 31_556_926;
 
@@ -92,29 +93,34 @@ contract Vault is ERC4626, Ownable {
     /// loanAddr => injected capital
     mapping(address => InjectedCapital) public injectedAssets;
 
-    /// globální úrokový index
+    /// Global interest
     uint256 public accumulatedInterest;
     uint256 public lastInterestUpdate;
 
-    /// pro jednoduchost – celkový injected principal (v PYUSD ekv.)
-    uint256 public totalInjectedAssets;
-
-    // ---------------------USER ACCOUNTING (NEW)----------------------
-    /// @notice čistý principal v PYUSD, který patří konkrétnímu uživateli (nezahrnuje výnosy mimo Vault)
+    // ---------------------USER ACCOUNTING----------------------
+    /// @notice User principal in PYUSD,associated with certain user
     mapping(address => uint256) public userPrincipal;
 
-    /// @notice součet všech userPrincipal
+    /// @notice Sum of all user principal
     uint256 public totalPrincipal;
 
     // --------------------EVENTS----------------------
+    /// @notice Emitted when vault injects to any loan
     event CapitalInjected(address indexed loan, uint256 amountEthSent);
-    event CapitalWithdrawn(address indexed loan, uint256 amountEthReceived);
-    event LoanLiquidated(address indexed loan, uint256 profit);
-    event InterestUpdated(uint256 newAccumulatedInterest, uint256 timestamp);
-    event InterestRateSet(uint256 newRate);
-    event ThresholdsSet(uint256 injection, uint256 withdrawal, uint256 liquidation);
 
+    /// @notice Emitted when vault withdraws from any loan
+    event CapitalWithdrawn(address indexed loan, uint256 amountEthReceived);
+
+    /// @notice Emitted when vault liquidates a loan
+    event LoanLiquidated(address indexed loan, uint256 profit);
+
+    /// @notice Emitted when new interest rate is set
+    event InterestUpdated(uint256 newAccumulatedInterest, uint256 timestamp);
+
+    /// @notice Emmited when principal is deposited into vault
     event DepositedPrincipal(address indexed owner, address indexed receiver, uint256 assets, uint256 shares);
+    
+    /// @notice Emmited when LP withdraws his tokens back from vault
     event WithdrawnAmount(address indexed owner, address indexed receiver, uint256 assets, uint256 sharesBurned);
 
     // -------------------CONSTRUCTOR------------------------
@@ -138,73 +144,52 @@ contract Vault is ERC4626, Ownable {
         lastInterestUpdate = block.timestamp;
     }
 
-    // ------------------EXTERNAL: USER FLOW-----------------------
+    // ------------------EXTERNAL FUNCTIONS-----------------------
 
     /**
-     * @notice Deposit assets into the vault and zároveň zvýší per-user principal.
-     * @dev Caller musí mít approve na PYUSD -> address(this).
-     * @param amount PYUSD (6 dec)
-     * @param receiver komu se připíší shares + principal
+     * @notice Deposit assets into the vault and zároveň zvýší per-user principal
+     * @param amount Amount of PYUSD (6 dec)
+     * @param receiver Reeciver of shares + principal
+     * 
+     * @dev Caller requires previous approve on PYUSD -> address(this).
      */
     function depositFor(uint256 amount, address receiver) external returns (uint256 shares) {
-        console.log("Vault.depositFor amount:", amount, "receiver:", receiver);
-        console.log("Vault.depositFor msg.sender:", msg.sender);
-        console.log("Vault.depositFor user shares before:", balanceOf(receiver));
-        console.log("Vault.depositFor totalSupply before:", totalSupply());
-
         // Transfer PYUSD from msg.sender to vault
         IERC20(asset()).transferFrom(msg.sender, address(this), amount);
-        console.log("Vault.depositFor PYUSD transferred successfully");
         
         // Calculate shares to mint (1:1 ratio for simplicity)
         shares = amount;
-        console.log("Vault.depositFor shares to mint:", shares);
         
         // Mint shares to receiver
         _mint(receiver, shares);
-        console.log("Vault.depositFor shares minted:", shares);
 
-        // Účetnictví principalu
         userPrincipal[receiver] += amount;
         totalPrincipal += amount;
 
         emit DepositedPrincipal(msg.sender, receiver, amount, shares);
-
-        console.log("Vault: userPrincipal[receiver]:", userPrincipal[receiver]);
-        console.log("Vault: user shares after:", balanceOf(receiver));
-        console.log("Vault: totalAssets:", totalAssets(), " totalSupply:", totalSupply());
     }
 
     /**
-     * @notice Vybere přesné množství PYUSD pro msg.sender (sníží jeho principal).
-     * @dev Interně spočítá sharesNeeded (previewWithdraw) a zavolá ERC4626 withdraw.
-     * @param amount PYUSD k výběru (6 dec)
-     * @param receiver adresa, která obdrží PYUSD
-     * @return sharesBurned kolik shares se spálilo
+     * @notice Withdraws amount of PYUSD for LP msg.sender (sníží jeho principal)
+     * @param amount PYUSD to withdraw (6 dec)
+     * @param receiver Address that receives withdrawn PYUSD
+     * @return sharesBurned Amount of bunrt shares
+     *
+     * @dev Interněally computes sharesNeeded (previewWithdraw) a calls ERC4626 withdraw.
      */
     function withdrawAmount(uint256 amount, address receiver) external returns (uint256 sharesBurned) {
-        console.log("Vault.withdrawAmount amount:", amount, "receiver:", receiver);
-        console.log("Vault.withdrawAmount msg.sender:", msg.sender);
-        console.log("Vault.withdrawAmount userPrincipal[msg.sender]:", userPrincipal[msg.sender]);
-        console.log("Vault.withdrawAmount userPrincipal[receiver]:", userPrincipal[receiver]);
-
         if (userPrincipal[msg.sender] < amount) revert Vault__PrincipalTooLow();
-        if (totalAssets() < amount) revert Vault__InsufficientLiquidity(); // chrání pro případ, že je část kapitálu zainvestovaná
+        if (totalAssets() < amount) revert Vault__InsufficientLiquidity();
 
         // Calculate shares needed (1:1 ratio for simplicity)
         uint256 sharesNeeded = amount;
-        console.log("Vault.withdrawAmount sharesNeeded:", sharesNeeded);
-        console.log("Vault.withdrawAmount user shares:", balanceOf(msg.sender));
 
         // Burn shares from msg.sender
         _burn(msg.sender, sharesNeeded);
-        console.log("Vault.withdrawAmount shares burned:", sharesNeeded);
         
         // Transfer PYUSD to receiver
         IERC20(asset()).transfer(receiver, amount);
-        console.log("Vault.withdrawAmount PYUSD transferred to receiver:", amount);
 
-        // Účetnictví principalu
         userPrincipal[msg.sender] -= amount;
         totalPrincipal -= amount;
 
@@ -213,20 +198,23 @@ contract Vault is ERC4626, Ownable {
     }
 
     /**
-     * @notice Pohodlná obálka pro "klasický" redeem (na shares).
+     * @notice Wrapper for basic redeem
+     * @param shares Amount of tokens to withdraw
+     * @param receiver Address that receive withdrawn tokens
+     * @return assets Amount withdrawn
      */
     function withdrawFromVault(uint256 shares, address receiver) external returns (uint256 assets) {
         assets = redeem(shares, receiver, msg.sender);
-        // POZOR: redeem na shares **nemění** userPrincipal – to držíme konzistentní jen přes withdrawAmount().
-        // Pokud chceš synchronizovat i tenhle path, můžeš zde odečíst min(assets, userPrincipal[msg.sender]).
     }
 
     function balanceOfVault(address account) external view returns (uint256) {
         return balanceOf(account);
     }
 
-    // ------------------ LOAN FLOW (původní logika) -----------------------
-
+    /**
+     * @notice Adds collateral to an existing loan with low HF to "heal it"
+     * @param loan Address of the wrapper holding this loan
+     */
     function injectToLoan(address loan) external {
         updateAccumulatedInterest();
 
@@ -242,7 +230,7 @@ contract Vault is ERC4626, Ownable {
         (, int256 pyusdPriceInt, , , ) = PYUSD_USD_FEED.latestRoundData();
         uint256 pyusdPrice = uint256(pyusdPriceInt);
 
-        // USD -> PYUSD (PYUSD má 6 dec; feed typicky 8)
+        // USD -> PYUSD (PYUSD has 6 dec; feed typically 8)
         uint256 injectionAmountPyUsd = (injectionAmountUsd * 1e18) / (pyusdPrice * 1e10);
 
         uint256 amountEthOut = _swapPyUsdToEth(injectionAmountPyUsd);
@@ -258,6 +246,10 @@ contract Vault is ERC4626, Ownable {
         emit CapitalInjected(loan, amountEthOut);
     }
 
+    /**
+     * @notice Withdraws additional collateral from loan after HF recovers
+     * @param loan Address of the wrapper holding this loan
+     */
     function withdrawFromLoan(address loan) external {
         updateAccumulatedInterest();
         
@@ -265,10 +257,8 @@ contract Vault is ERC4626, Ownable {
         if (injected.amountPyUsd == 0) revert Vault__NoInjectedAssets();
         
         uint256 investorCollateral = ILoanWrapper(loan).getInvestorCollateralValue();
-        uint256 userCollateral = ILoanWrapper(loan).getOwnerCollateralValue();
 
-        // 3 % z user collateral (jak máš v poznámce) – tady bylo trochu nejasné,
-        // nechávám tvůj původní výpočet (3 % z investorCollateral), případně uprav:
+        // We also take 3% provision for injection from the initial collateral from the user
         uint256 userCollateralToWithdraw = (investorCollateral * 3) / 100;
 
         ILoanWrapper(loan).decreaseCollateralForVault(investorCollateral, userCollateralToWithdraw);
@@ -276,135 +266,87 @@ contract Vault is ERC4626, Ownable {
         uint256 totalEthToWithdraw = investorCollateral + userCollateralToWithdraw;
 
         uint256 pyusdReceived = _swapEthToPyUsd(totalEthToWithdraw);
-        // PYUSD zůstává ve vaultu → totalAssets se zvedne
 
         delete injectedAssets[loan];
 
         emit CapitalWithdrawn(loan, totalEthToWithdraw);
-        pyusdReceived; // silence warning
+        pyusdReceived;
     }
 
+    /**
+     * @notice Liquidates the loan when HF drops below the threshold. Injection 
+     * must be executed before liquidation
+     * @param loan Address of the wrapper holding this loan
+     */
     function liquidate(address loan) external {
-        console.log("=== LIQUIDATE FUNCTION START ===");
-        console.log("Liquidating loan:", loan);
-        console.log("Vault PYUSD balance:", IERC20(asset()).balanceOf(address(this)));
-
         updateAccumulatedInterest();
 
         InjectedCapital memory injected = injectedAssets[loan];
-        console.log("Injected amountPyUsd:", injected.amountPyUsd);
-        console.log("Injected amountEthSent:", injected.amountEthSent);
-        console.log("Injected initialAccumulatedInterest:", injected.initialAccumulatedInterest);
         
         if (injected.amountPyUsd == 0) {
-            console.log("ERROR: No injected assets found for this loan");
             revert Vault__NoInjectedAssets();
         }
-        // Tohle je uplne k nicemu
         uint256 collateralValueEth = ILoanWrapper(loan).getTotalCollateralValue();
-        console.log("Collateral value in ETH:", collateralValueEth);
         uint256 debtValue = ILoanWrapper(loan).getTotalDebtValue();
 
         if (collateralValueEth == 0) {
-            console.log("ERROR: Invalid loan address - no collateral value");
             revert Vault__InvalidLoanAddress();
         }
 
         // Convert ETH collateral value to PYUSD
-        // Tohle je uplne zbytecny
-        //uint256 amountToLiquidatePyUsd = _getEthValueInPyusd(collateralValueEth);
         uint256 amountToLiquidatePyUsd = _getPyusdAmountForUsdc(debtValue);
-        console.log("Amount to liquidate in PYUSD:", amountToLiquidatePyUsd);
 
         uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
-        console.log("Vault PYUSD balance:", vaultBalance);
-        console.log("Required amount in PYUSD:", amountToLiquidatePyUsd);
         
         if (vaultBalance < amountToLiquidatePyUsd) {
-            console.log("ERROR: Insufficient liquidity in vault");
             revert Vault__InsufficientLiquidity();
         }
 
         // Get the actual USDC amount needed for repayment
         uint256 usdcAmountNeeded = ILoanWrapper(loan).getTotalDebtValue();
-        console.log("USDC amount needed for repayment:", usdcAmountNeeded);
         
         // For liquidation, we need USDC but Vault has PYUSD
         // Convert 1:1 PYUSD to USDC (simplified for liquidation)
-        console.log("Converting PYUSD to USDC for repayment (1:1 ratio)");
         uint256 pyusdAmountNeeded = usdcAmountNeeded; // 1:1 conversion
         
         // Check if we have enough PYUSD for the conversion
         if (IERC20(asset()).balanceOf(address(this)) < pyusdAmountNeeded) {
-            console.log("ERROR: Insufficient PYUSD for USDC conversion");
             revert Vault__InsufficientLiquidity();
         }
         
         // For liquidation, swap PYUSD to USDC using simple 1:1 conversion
-        console.log("Swapping PYUSD to USDC for liquidation (1:1)");
-        console.log("PYUSD amount for swap:", pyusdAmountNeeded);
         IERC20(asset()).approve(address(SWAP_ROUTER), pyusdAmountNeeded);
         uint256 usdcReceived = MockUniswapRouter(address(SWAP_ROUTER)).swapPyUsdToUsdc(asset(), DEBT_TOKEN_ADDR, pyusdAmountNeeded);
-        console.log("USDC received from swap:", usdcReceived);
-    console.log("USDC balance of vault:", IERC20(DEBT_TOKEN_ADDR).balanceOf(address(this)));
         
         // Transfer USDC to loan wrapper for repayment
-        console.log("Transferring USDC to loan wrapper for repayment");
         IERC20(DEBT_TOKEN_ADDR).transfer(loan, usdcReceived);
-        console.log("USDC transferred to loan:", usdcReceived);
         
-        console.log("Calling repayLoan on loan wrapper");
         ILoanWrapper(loan).repayLoan();
-
-        // After repaying the loan, withdraw all collateral
-        uint256 investorCollateral = ILoanWrapper(loan).getInvestorCollateralValue();
-        uint256 userCollateral = ILoanWrapper(loan).getOwnerCollateralValue();
-        console.log("Investor collateral to withdraw:", investorCollateral);
-        console.log("User collateral to withdraw:", userCollateral);
-        
-        // CO je zas tohle? xDD
-        // Do tyhle podminky to nikdy neskoci, protoze loan uz je repaid -> obe promenny jsou nastaveny na 0
-        if (investorCollateral > 0 || userCollateral > 0) {
-            console.log("Withdrawing all collateral from loan wrapper");
-            ILoanWrapper(loan).decreaseCollateralForVault(investorCollateral, userCollateral);
-            
-            uint256 totalEthReceived = investorCollateral + userCollateral;
-            console.log("Total ETH received from collateral:", totalEthReceived);
-            
-            // Convert ETH back to PYUSD and keep it in vault
-            uint256 pyusdFromCollateral = _swapEthToPyUsd(totalEthReceived);
-            console.log("PYUSD received from collateral swap:", pyusdFromCollateral);
-        }
-
-        console.log("Updating totalInjectedAssets");
-        console.log("Current totalInjectedAssets:", totalInjectedAssets);
-        console.log("Injected amountEthSent:", injected.amountEthSent);
-        
-        if (totalInjectedAssets >= injected.amountEthSent) {
-            totalInjectedAssets -= injected.amountEthSent;
-        } else {
-            totalInjectedAssets = 0;
-        }
-        
-        console.log("New totalInjectedAssets:", totalInjectedAssets);
-        
-        console.log("Deleting injected assets for loan");
+                
         delete injectedAssets[loan];
 
-        console.log("Emitting LoanLiquidated event");
-        console.log("CURR BALANCE:", address(this).balance);
-        uint256 pyusdFromEth = _swapEthToPyUsd(address(this).balance);
-        
-        totalInjectedAssets += pyusdFromEth;
-        //totalPrincipal += pyusdFromEth;
+        _swapEthToPyUsd(address(this).balance);
 
-        emit LoanLiquidated(loan, amountToLiquidatePyUsd);
-        
-        console.log("=== LIQUIDATE FUNCTION END ===");
+        emit LoanLiquidated(loan, amountToLiquidatePyUsd);        
     }
 
-    // ------------------- SWAPS -------------------
+    function transferFee() external {
+        _swapEthToPyUsd(address(this).balance);
+    }
 
+    function principalOf(address user) external view returns (uint256) {
+        return userPrincipal[user];
+    }
+
+    function availableAssets() external view returns (uint256) {
+        return totalAssets();
+    }
+
+    // -------------------INTERNAL AND PRIVATE FUNCTIONS-------------------
+    /**
+     * @notice Swaps PYUSD to WETH (wrapped ETH) with current conversion rate
+     * @param amountIn Amount of PYUSD to swap
+     */
     function _swapPyUsdToEth(uint256 amountIn) internal virtual returns (uint256) {
         IERC20(PYUSD_TOKEN).approve(address(SWAP_ROUTER), amountIn);
 
@@ -423,9 +365,13 @@ contract Vault is ERC4626, Ownable {
         if (amountWethOut == 0) revert Vault__SwapFailed();
 
         IWETH(WETH_TOKEN).withdraw(amountWethOut);
-        return amountWethOut; // ETH
+        return amountWethOut;
     }
 
+    /**
+     * @notice Swaps WETH (wrapped ETH) to PYUSD in current conversion rate
+     * @param amountIn Amount of WETH to swap
+     */
     function _swapEthToPyUsd(uint256 amountIn) internal virtual returns (uint256) {
         IWETH(WETH_TOKEN).deposit{value: amountIn}();
         IWETH(WETH_TOKEN).approve(address(SWAP_ROUTER), amountIn);
@@ -442,11 +388,15 @@ contract Vault is ERC4626, Ownable {
         });
 
         uint256 amountPyUsdOut = SWAP_ROUTER.exactInputSingle(params);
-        console.log("Tak cos mi to dal:", amountPyUsdOut);
         if (amountPyUsdOut == 0) revert Vault__SwapFailed();
         return amountPyUsdOut;
     }
 
+    /**
+     * @notice NOT USED IN THIS PROJECT
+     * @notice Should swap PYUSD to USDC in ratio ~1:1
+     * @param amountIn Amount of PYUSD to swap
+     */
     function _swapPyUsdToUsdc(uint256 amountIn) internal virtual returns (uint256) {
         IERC20(PYUSD_TOKEN).approve(address(SWAP_ROUTER), amountIn);
 
@@ -467,14 +417,20 @@ contract Vault is ERC4626, Ownable {
         return amountOut;
     }
 
-    function _getPyusdAmountForUsdc(uint256 usdcAmount) internal view returns (uint256) {
+    /**
+     * @notice Dummy swap USDC -> PYUSD
+     * @param usdcAmount amount of USDC tokens to swap
+     */
+    function _getPyusdAmountForUsdc(uint256 usdcAmount) internal pure returns (uint256) {
         // For mock purposes, assume 1:1 conversion PYUSD to USDC
         // In real scenario, you would use price feeds to calculate the conversion
         return usdcAmount;
     }
 
-    // ------------------- VIEW / HELPERS -------------------
-
+    // -------------------PUBLIC FUNCTIONS-------------------
+    /**
+     * @notice Sets new interest for LPs
+     */
     function updateAccumulatedInterest() public {
         if (block.timestamp > lastInterestUpdate) {
             uint256 timeDelta = block.timestamp - lastInterestUpdate;
@@ -486,12 +442,12 @@ contract Vault is ERC4626, Ownable {
         }
     }
 
-    /// ERC4626 accounting – jen skutečný PYUSD ve vaultu
+    /// @notice ERC4626 accounting – jen skutečný PYUSD ve vaultu
     function totalAssets() public view override returns (uint256) {
         return IERC20(asset()).balanceOf(address(this));
     }
 
-    /// Shares decimals = asset decimals (správné dědění)
+    /// @notice Shares decimals of ERC4626 token (PYUSD)
     function decimals()
         public
         view
@@ -501,6 +457,10 @@ contract Vault is ERC4626, Ownable {
         return ERC4626.decimals();
     }
 
+    /**
+     * @notice Returns amount in PYUSD that is injected to the loan
+     * @param loan Address of the loan we want to observe
+     */
     function currentLoanValue(address loan) public view returns (uint256) {
         InjectedCapital memory injected = injectedAssets[loan];
         if (injected.amountPyUsd == 0) return 0;
@@ -516,32 +476,5 @@ contract Vault is ERC4626, Ownable {
         return injected.amountPyUsd.mulDiv(currentAccInterest, injected.initialAccumulatedInterest);
     }
 
-    function _getEthValueInPyusd(uint256 ethAmount) internal view returns (uint256) {
-        if (ethAmount == 0) return 0;
-        (, int256 ethPriceInt, , , ) = ETH_USD_FEED.latestRoundData();
-        (, int256 pyusdPriceInt, , , ) = PYUSD_USD_FEED.latestRoundData();
-        uint256 ethPrice = uint256(ethPriceInt);
-        uint256 pyusdPrice = uint256(pyusdPriceInt);
-
-        uint256 ethValueUsd = (ethAmount * ethPrice) / 1e18;
-        uint256 pyusdValue = (ethValueUsd * 1e6) / pyusdPrice; // PYUSD 6 dec
-        return pyusdValue;
-    }
-
-    function _getTotalLoanValue() internal view returns (uint256) {
-        return totalInjectedAssets;
-    }
-
-    // --------- Convenience views ---------
-    function principalOf(address user) external view returns (uint256) {
-        return userPrincipal[user];
-    }
-
-    function availableAssets() external view returns (uint256) {
-        return totalAssets();
-    }
-
-    receive() external payable {
-        // držíme ETH pro collateral operace; neswapujeme automaticky
-    }
+    receive() external payable {}
 }
