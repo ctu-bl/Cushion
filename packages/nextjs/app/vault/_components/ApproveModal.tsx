@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 
 type ApproveModalProps = {
   isOpen: boolean;
@@ -21,11 +21,29 @@ export const ApproveModal: React.FC<ApproveModalProps> = ({
   isLoading,
   isSuccess,
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-xl w-full max-w-md p-6">
+      <div ref={modalRef} className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-xl w-full max-w-md p-6">
         <h3 className="text-2xl font-bold mb-4 text-base-content">Approve pyUSD</h3>
         <p className="text-base-content/70 mb-6">Allow the vault to spend your pyUSD tokens</p>
 
@@ -54,7 +72,7 @@ export const ApproveModal: React.FC<ApproveModalProps> = ({
             {isSuccess ? "Close" : "Cancel"}
           </button>
           <button
-            className="btn btn-secondary"
+            className="btn btn-primary"
             onClick={onApprove}
             disabled={!approveAmount || parseFloat(approveAmount) <= 0 || isLoading}
           >

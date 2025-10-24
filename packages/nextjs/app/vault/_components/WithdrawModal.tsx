@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 
 type WithdrawModalProps = {
   isOpen: boolean;
@@ -23,11 +23,29 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   userBalance,
   userVaultBalance,
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-xl w-full max-w-md p-6">
+      <div ref={modalRef} className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-xl w-full max-w-md p-6">
         <h3 className="text-2xl font-bold mb-4 text-base-content">Withdraw pyUSD</h3>
         <p className="text-base-content/70 mb-6">Enter the amount you want to withdraw from the vault</p>
 
@@ -45,9 +63,13 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
           />
         </label>
 
-        <div className="text-sm text-base-content/60 mb-4">
-          <div>Available: {userVaultBalance} pyUSD</div>
-          <div>In Wallet: {userBalance} pyUSD</div>
+        <div className="bg-base-200/50 rounded-lg p-4 mb-4">
+          <div className="text-sm text-base-content/80 mb-2">
+            <span className="font-semibold">In Vault:</span> {userVaultBalance} pyUSD
+          </div>
+          <div className="text-sm text-base-content/80">
+            <span className="font-semibold">In Wallet:</span> {userBalance} pyUSD
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">
@@ -60,7 +82,12 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
           <button
             className="btn btn-primary"
             onClick={onWithdraw}
-            disabled={isLoading}
+            disabled={
+              !withdrawAmount || 
+              parseFloat(withdrawAmount) <= 0 || 
+              parseFloat(withdrawAmount) > parseFloat(userVaultBalance.replace(/,/g, '')) || 
+              isLoading
+            }
           >
             {isLoading ? "Withdrawing..." : "Withdraw"}
           </button>
