@@ -73,7 +73,6 @@ export default function DashboardPage() {
             address={simulationData.address} 
             mockUSDCBalance={simulationData.mockUSDCBalance as bigint | undefined} 
             mockPYUSDBalance={simulationData.mockPYUSDBalance as bigint | undefined} 
-            mockWETHBalance={simulationData.mockWETHBalance as bigint | undefined} 
           />
           <TakeLoanSection
             borrowAmount={actions.borrowAmount}
