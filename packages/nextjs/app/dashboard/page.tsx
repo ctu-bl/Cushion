@@ -88,7 +88,7 @@ export default function DashboardPage() {
         </div>
 
         {/* My Loan via Cushion */}
-        {simulationData.userWrapperAddress && (
+        {simulationData.userWrapperAddress && simulationData.userWrapperAddress !== "0x0000000000000000000000000000000000000000" && (
           <div className="mb-8">
             <MyLoanSection
               userWrapperAddress={simulationData.userWrapperAddress as string}
@@ -104,7 +104,8 @@ export default function DashboardPage() {
         )}
 
         {/* Loan Management Buttons */}
-        <div className="mb-8">
+        {simulationData.userWrapperAddress && simulationData.userWrapperAddress !== "0x0000000000000000000000000000000000000000" && (
+          <div className="mb-8">
           <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-lg p-6">
             <h2 className="text-2xl font-bold mb-6 text-white text-center">Loan Management</h2>
             
@@ -168,6 +169,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* ETH Price History Chart */}
         <div className="mb-8">

@@ -118,7 +118,7 @@ export default function SimulationPage() {
         )}
 
         {/* Loan Management */}
-        {simulationData.userWrapperAddress && (
+        {simulationData.userWrapperAddress && simulationData.userWrapperAddress !== "0x0000000000000000000000000000000000000000" && (
           <div className="mb-8">
             <div className="card bg-base-100 rounded-2xl border border-base-content/10 shadow-lg p-6">
               <h2 className="text-2xl font-bold mb-6 text-white text-center">Loan Management</h2>

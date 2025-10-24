@@ -46,6 +46,18 @@ const WrapperRow: React.FC<{
   const liquidationThreshold = 0.85;
   const hfAfterWithdraw = currentTotalDebt > 0 ? (collateralValueUsd * liquidationThreshold) / currentTotalDebt : 0;
   
+  // Debug info
+  console.log('Debug VaultControls:', {
+    wrapper,
+    currentHF,
+    currentInvestorCollateral,
+    currentTotalCollateral,
+    currentTotalDebt,
+    collateralAfterWithdraw,
+    hfAfterWithdraw,
+    isLocked: Boolean(isLocked),
+    isWithdrawEnabled: Boolean(isLocked) && hfAfterWithdraw > 1.5
+  });
   
   // Button logic
   const isInjectEnabled = currentHF < 1.15 && !Boolean(isLocked);
@@ -77,11 +89,8 @@ const WrapperRow: React.FC<{
         <div className={`text-xs ${Boolean(isLocked) ? 'text-warning' : 'text-success'}`}>
           {Boolean(isLocked) ? '🔒 Locked' : '✅ Unlocked'}
         </div>
-        {investorCollateral && Number(investorCollateral) > 0 && (
-          <div className="text-xs text-white/50">
-            Investor Collateral: {(Number(investorCollateral) / 1e18).toFixed(4)} ETH
-          </div>
-        )}
+ 
+       
       </div>
       <div className="flex gap-2">
         <button 
