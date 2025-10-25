@@ -86,6 +86,7 @@ export default function SimulationPage() {
               onWrapLoan={actions.handleWrapLoan}
               createdWrapperAddress={actions.createdWrapperAddress}
               wrapperAddress={simulationData.userWrapperAddress as string | undefined}
+              ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals) || "2000"}
             />
           </div>
         <div className="flex flex-col gap-6">
@@ -102,7 +103,10 @@ export default function SimulationPage() {
         </div>
 
         {/* My Loan via Cushion */}
-        {simulationData.userWrapperAddress && (
+        {simulationData.userWrapperAddress && 
+         wrapperData.ownerCollateral && 
+         wrapperData.totalDebt && 
+         (Number(wrapperData.ownerCollateral) > 0 || Number(wrapperData.totalDebt) > 0) && (
           <MyLoanSection
             userWrapperAddress={simulationData.userWrapperAddress as string}
             isLocked={Boolean(wrapperData.isLocked)}
@@ -245,7 +249,7 @@ export default function SimulationPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals) || "2000"}
       />
 
       <RemoveCollateralModal
@@ -269,7 +273,7 @@ export default function SimulationPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals) || "2000"}
       />
 
       <BorrowMoreModal
@@ -287,7 +291,7 @@ export default function SimulationPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals) || "2000"}
       />
 
       <RepayDebtModal
@@ -305,7 +309,7 @@ export default function SimulationPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals) || "2000"}
       />
 
       <RepayAllDebtModal

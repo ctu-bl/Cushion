@@ -12,6 +12,7 @@
     "clean": "hardhat clean",
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.ts",
+    "deploy:sepolia": "hardhat run scripts/deploy_to_sepolia.ts --network sepolia",
     "flatten": "hardhat flatten",
     "fork": "SEPOLIA_FORKING_ENABLED=true hardhat node",
     "format": "prettier --write './**/*.(ts|sol)'",

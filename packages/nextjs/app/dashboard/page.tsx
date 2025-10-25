@@ -87,7 +87,11 @@ export default function DashboardPage() {
         </div>
 
         {/* My Loan via Cushion */}
-        {simulationData.userWrapperAddress && simulationData.userWrapperAddress !== "0x0000000000000000000000000000000000000000" && (
+        {simulationData.userWrapperAddress && 
+         simulationData.userWrapperAddress !== "0x0000000000000000000000000000000000000000" &&
+         wrapperData.ownerCollateral && 
+         wrapperData.totalDebt && 
+         (Number(wrapperData.ownerCollateral) > 0 || Number(wrapperData.totalDebt) > 0) && (
           <div className="mb-8">
             <MyLoanSection
               userWrapperAddress={simulationData.userWrapperAddress as string}
