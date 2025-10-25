@@ -12,6 +12,8 @@ type TakeLoanSectionProps = {
   createdWrapperAddress?: string;
   wrapperAddress?: string;
   ethPrice?: string;
+  totalDebt?: bigint;
+  totalCollateral?: bigint;
 };
 
 export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
@@ -22,7 +24,9 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
   onWrapLoan,
   createdWrapperAddress,
   wrapperAddress,
-  ethPrice = "2000"
+  ethPrice,
+  totalDebt,
+  totalCollateral
 }) => {
   // Calculate health factor for the new loan
   const calculateHealthFactor = () => {
@@ -32,10 +36,14 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
     
     const borrowAmountNum = parseFloat(borrowAmount);
     const collateralAmountNum = parseFloat(collateralAmount);
-    const price = parseFloat(ethPrice);
+    const price = ethPrice ? parseFloat(ethPrice) : 2000;
     
-    // Convert ETH to USD value
-    const collateralValueUsd = collateralAmountNum * price;
+    // Apply 3% fee to collateral (subtract 3% from collateral)
+    const feePercentage = 0.03; // 3%
+    const effectiveCollateralAmount = collateralAmountNum * (1 - feePercentage);
+    
+    // Convert ETH to USD value (using effective collateral after fee)
+    const collateralValueUsd = effectiveCollateralAmount * price;
     const debtValueUsd = borrowAmountNum;
     
     if (debtValueUsd <= 0) return null;
@@ -51,6 +59,9 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
   const healthFactor = calculateHealthFactor();
   const isHealthFactorTooLow = healthFactor !== null && healthFactor < 1.2;
   const isHealthFactorWarning = healthFactor !== null && healthFactor < 2.0 && healthFactor >= 1.2;
+  
+  // Check if user already has an active loan (debt > 0 OR collateral > 0)
+  const hasActiveLoan = (totalDebt && totalDebt > 0n) || (totalCollateral && totalCollateral > 0n);
 
   return (
   <SectionCard title="Take Loan via Cushion" className="h-full">
@@ -120,12 +131,13 @@ export const TakeLoanSection: React.FC<TakeLoanSectionProps> = ({
       <div className="form-control">
         <button 
           className={`btn w-full ${
+            hasActiveLoan ? "btn-disabled" :
             isHealthFactorTooLow ? "btn-secondary" : "btn-primary"
           }`}
           onClick={onWrapLoan}
-          disabled={isHealthFactorTooLow}
+          disabled={hasActiveLoan || isHealthFactorTooLow}
         >
-          Take Loan via Cushion
+          {hasActiveLoan ? "You already have a loan" : "Take Loan via Cushion"}
         </button>
       </div>
     </div>

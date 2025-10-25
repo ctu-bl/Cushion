@@ -2,20 +2,13 @@
 
 import React, { useState } from "react";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useWrapperData } from "../_hooks/useWrapperData";
 
 type VaultControlsProps = {
   allWrappers?: string[];
   onInject: (wrapper: `0x${string}`) => void | Promise<void>;
   onWithdraw: (wrapper: `0x${string}`) => void | Promise<void>;
   onLiquidate: (wrapper: `0x${string}`) => void | Promise<void>;
-  // Add wrapper data props
-  userWrapperAddress?: string;
-  isLocked?: boolean;
-  healthFactor?: bigint;
-  totalCollateral?: bigint;
-  totalDebt?: bigint;
-  ownerCollateral?: bigint;
-  investorCollateral?: bigint;
   ethPrice?: string;
 };
 
@@ -24,18 +17,14 @@ const WrapperRow: React.FC<{
   onInject: VaultControlsProps["onInject"]; 
   onWithdraw: VaultControlsProps["onWithdraw"]; 
   onLiquidate: VaultControlsProps["onLiquidate"];
-  // Add wrapper data props
-  isLocked?: boolean;
-  healthFactor?: bigint;
-  totalCollateral?: bigint;
-  totalDebt?: bigint;
-  investorCollateral?: bigint;
   ethPrice?: string;
-}> = ({ wrapper, onInject, onWithdraw, onLiquidate, isLocked, healthFactor, totalCollateral, totalDebt, investorCollateral, ethPrice }) => {
-  const currentHF = healthFactor ? Number(healthFactor) / 1e18 : 0;
-  const currentInvestorCollateral = investorCollateral ? Number(investorCollateral) / 1e18 : 0;
-  const currentTotalCollateral = totalCollateral ? Number(totalCollateral) / 1e18 : 0;
-  const currentTotalDebt = totalDebt ? Number(totalDebt) / 1e6 : 0; // USDC has 6 decimals
+}> = ({ wrapper, onInject, onWithdraw, onLiquidate, ethPrice }) => {
+  // Load data for this specific wrapper
+  const wrapperData = useWrapperData(wrapper);
+  const currentHF = wrapperData.healthFactor ? Number(wrapperData.healthFactor) / 1e18 : 0;
+  const currentInvestorCollateral = wrapperData.investorCollateral ? Number(wrapperData.investorCollateral) / 1e18 : 0;
+  const currentTotalCollateral = wrapperData.totalCollateral ? Number(wrapperData.totalCollateral) / 1e18 : 0;
+  const currentTotalDebt = wrapperData.totalDebt ? Number(wrapperData.totalDebt) / 1e6 : 0; // USDC has 6 decimals
   
   // Calculate what HF would be after withdrawing investor collateral
   // Using same formula as TakeLoanSection: HF = (Collateral Value * Liquidation Threshold) / Debt Value
@@ -55,14 +44,14 @@ const WrapperRow: React.FC<{
     currentTotalDebt,
     collateralAfterWithdraw,
     hfAfterWithdraw,
-    isLocked: Boolean(isLocked),
-    isWithdrawEnabled: Boolean(isLocked) && hfAfterWithdraw > 1.5
+    isLocked: Boolean(wrapperData.isLocked),
+    isWithdrawEnabled: Boolean(wrapperData.isLocked) && hfAfterWithdraw > 1.5
   });
   
   // Button logic
-  const isInjectEnabled = currentHF < 1.15 && !Boolean(isLocked);
-  const isWithdrawEnabled = Boolean(isLocked) && hfAfterWithdraw > 1.5;
-  const isLiquidateEnabled = Boolean(isLocked) && currentHF < 1.3;
+  const isInjectEnabled = currentHF < 1.15 && !Boolean(wrapperData.isLocked);
+  const isWithdrawEnabled = Boolean(wrapperData.isLocked) && hfAfterWithdraw > 1.5;
+  const isLiquidateEnabled = Boolean(wrapperData.isLocked) && currentHF < 1.3;
   
   const handleInject = async () => {
     await onInject(wrapper);
@@ -86,8 +75,8 @@ const WrapperRow: React.FC<{
       <div className="text-center">
         <span className="text-xs text-white/70">Health Factor</span>
         <div className="font-mono text-lg font-bold text-white">{currentHF.toFixed(2)}</div>
-        <div className={`text-xs ${Boolean(isLocked) ? 'text-warning' : 'text-success'}`}>
-          {Boolean(isLocked) ? '🔒 Locked' : '✅ Unlocked'}
+        <div className={`text-xs ${Boolean(wrapperData.isLocked) ? 'text-warning' : 'text-success'}`}>
+          {Boolean(wrapperData.isLocked) ? '🔒 Locked' : '✅ Unlocked'}
         </div>
  
        
@@ -124,12 +113,6 @@ export const VaultControls: React.FC<VaultControlsProps> = ({
   onInject, 
   onWithdraw, 
   onLiquidate,
-  userWrapperAddress,
-  isLocked,
-  healthFactor,
-  totalCollateral,
-  totalDebt,
-  investorCollateral,
   ethPrice
 }) => {
   return (
@@ -144,11 +127,6 @@ export const VaultControls: React.FC<VaultControlsProps> = ({
               onInject={onInject} 
               onWithdraw={onWithdraw} 
               onLiquidate={onLiquidate}
-              isLocked={isLocked}
-              healthFactor={healthFactor}
-              totalCollateral={totalCollateral}
-              totalDebt={totalDebt}
-              investorCollateral={investorCollateral}
               ethPrice={ethPrice}
             />
           ))}

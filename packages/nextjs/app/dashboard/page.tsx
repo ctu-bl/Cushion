@@ -46,6 +46,13 @@ export default function DashboardPage() {
   const [showRepayDebt, setShowRepayDebt] = useState(false);
   const [showRepayAllDebt, setShowRepayAllDebt] = useState(false);
   const [showLoanDetails, setShowLoanDetails] = useState(false);
+  
+  // Loading states for modals
+  const [isAddCollateralLoading, setIsAddCollateralLoading] = useState(false);
+  const [isRemoveCollateralLoading, setIsRemoveCollateralLoading] = useState(false);
+  const [isBorrowMoreLoading, setIsBorrowMoreLoading] = useState(false);
+  const [isRepayDebtLoading, setIsRepayDebtLoading] = useState(false);
+  const [isRepayAllDebtLoading, setIsRepayAllDebtLoading] = useState(false);
 
   if (!isConnected) {
     return (
@@ -83,6 +90,8 @@ export default function DashboardPage() {
             createdWrapperAddress={actions.createdWrapperAddress}
             wrapperAddress={simulationData.userWrapperAddress as string | undefined}
             ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals) || "2000"}
+            totalDebt={wrapperData.totalDebt as bigint | undefined}
+            totalCollateral={wrapperData.totalCollateral as bigint | undefined}
           />
         </div>
 
@@ -193,13 +202,17 @@ export default function DashboardPage() {
         onClose={() => setShowAddCollateral(false)}
         onAddCollateral={async (amount) => {
           try {
+            setIsAddCollateralLoading(true);
             await actions.handleIncreaseCollateral(simulationData.userWrapperAddress!, amount);
             showSuccess(`Successfully added ${amount} ETH as collateral!`);
             setShowAddCollateral(false);
           } catch (error) {
             console.error("Add collateral failed:", error);
+          } finally {
+            setIsAddCollateralLoading(false);
           }
         }}
+        isLoading={isAddCollateralLoading}
         maxAmount={ethBalance ? Number(ethBalance.formatted).toFixed(4) : "0.0000"}
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
@@ -212,6 +225,7 @@ export default function DashboardPage() {
         onClose={() => setShowRemoveCollateral(false)}
         onRemoveCollateral={async (amount) => {
           try {
+            setIsRemoveCollateralLoading(true);
             await actions.handleDecreaseCollateral(
               simulationData.userWrapperAddress!,
               Boolean(wrapperData.isLocked),
@@ -223,8 +237,11 @@ export default function DashboardPage() {
             setShowRemoveCollateral(false);
           } catch (error) {
             console.error("Remove collateral failed:", error);
+          } finally {
+            setIsRemoveCollateralLoading(false);
           }
         }}
+        isLoading={isRemoveCollateralLoading}
         maxAmount={wrapperData.ownerCollateral ? (Number(wrapperData.ownerCollateral) / 1e18).toFixed(4) : "0.0000"}
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
@@ -237,13 +254,17 @@ export default function DashboardPage() {
         onClose={() => setShowBorrowMore(false)}
         onBorrowMore={async (amount) => {
           try {
+            setIsBorrowMoreLoading(true);
             await actions.handleIncreaseDebt(simulationData.userWrapperAddress!, amount);
             showSuccess(`Successfully borrowed ${amount} USDC!`);
             setShowBorrowMore(false);
           } catch (error) {
             console.error("Borrow more failed:", error);
+          } finally {
+            setIsBorrowMoreLoading(false);
           }
         }}
+        isLoading={isBorrowMoreLoading}
         maxAmount={simulationData.mockUSDCBalance ? (Number(simulationData.mockUSDCBalance) / 1e6).toFixed(2) : "0.00"}
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
@@ -256,13 +277,17 @@ export default function DashboardPage() {
         onClose={() => setShowRepayDebt(false)}
         onRepayDebt={async (amount) => {
           try {
+            setIsRepayDebtLoading(true);
             await actions.handleDecreaseDebt(simulationData.userWrapperAddress!, amount);
             showSuccess(`Successfully repaid ${amount} USDC!`);
             setShowRepayDebt(false);
           } catch (error) {
             console.error("Repay debt failed:", error);
+          } finally {
+            setIsRepayDebtLoading(false);
           }
         }}
+        isLoading={isRepayDebtLoading}
         maxAmount={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
@@ -275,6 +300,7 @@ export default function DashboardPage() {
         onClose={() => setShowRepayAllDebt(false)}
         onRepayAllDebt={async () => {
           try {
+            setIsRepayAllDebtLoading(true);
             await actions.handleRepayAllDebt(
               simulationData.userWrapperAddress!,
               wrapperData.totalDebt,
@@ -285,8 +311,11 @@ export default function DashboardPage() {
             setShowRepayAllDebt(false);
           } catch (error) {
             console.error("Repay all debt failed:", error);
+          } finally {
+            setIsRepayAllDebtLoading(false);
           }
         }}
+        isLoading={isRepayAllDebtLoading}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
       />
 
