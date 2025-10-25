@@ -127,14 +127,16 @@ export default function SimulationPage() {
                   <h3 className="text-lg font-semibold mb-4 text-white text-center">Collateral Management</h3>
                   <div className="space-y-3">
                     <button 
-                      className="btn btn-primary w-full"
+                      className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-primary'}`}
                       onClick={() => setShowAddCollateral(true)}
+                      disabled={Boolean(wrapperData.isLocked)}
                     >
                       Add Collateral
                     </button>
                     <button 
-                      className="btn btn-secondary w-full"
+                      className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-secondary'}`}
                       onClick={() => setShowRemoveCollateral(true)}
+                      disabled={Boolean(wrapperData.isLocked)}
                     >
                       Remove Collateral
                     </button>
@@ -146,14 +148,16 @@ export default function SimulationPage() {
                   <h3 className="text-lg font-semibold mb-4 text-white text-center">Debt Management</h3>
                   <div className="space-y-3">
                     <button 
-                      className="btn btn-primary w-full"
+                      className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-primary'}`}
                       onClick={() => setShowBorrowMore(true)}
+                      disabled={Boolean(wrapperData.isLocked)}
                     >
                       Borrow More
                     </button>
                     <button 
-                      className="btn btn-warning w-full"
+                      className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-warning'}`}
                       onClick={() => setShowRepayDebt(true)}
+                      disabled={Boolean(wrapperData.isLocked)}
                     >
                       Repay Debt
                     </button>
@@ -165,8 +169,9 @@ export default function SimulationPage() {
                   <h3 className="text-lg font-semibold mb-4 text-white text-center">Quick Actions</h3>
                   <div className="space-y-3">
                     <button 
-                      className="btn btn-success w-full"
+                      className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-success'}`}
                       onClick={() => setShowRepayAllDebt(true)}
+                      disabled={Boolean(wrapperData.isLocked)}
                     >
                       Repay All Debt
                     </button>

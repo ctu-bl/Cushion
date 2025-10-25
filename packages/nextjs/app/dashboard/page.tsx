@@ -114,14 +114,16 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-semibold mb-4 text-white text-center">Collateral Management</h3>
                 <div className="space-y-3">
                   <button 
-                    className="btn btn-primary w-full"
+                    className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-primary'}`}
                     onClick={() => setShowAddCollateral(true)}
+                    disabled={Boolean(wrapperData.isLocked)}
                   >
                     Add Collateral
                   </button>
                   <button 
-                    className="btn btn-secondary w-full"
+                    className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-secondary'}`}
                     onClick={() => setShowRemoveCollateral(true)}
+                    disabled={Boolean(wrapperData.isLocked)}
                   >
                     Remove Collateral
                   </button>
@@ -133,14 +135,16 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-semibold mb-4 text-white text-center">Debt Management</h3>
                 <div className="space-y-3">
                   <button 
-                    className="btn btn-primary w-full"
+                    className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-primary'}`}
                     onClick={() => setShowBorrowMore(true)}
+                    disabled={Boolean(wrapperData.isLocked)}
                   >
                     Borrow More
                   </button>
                   <button 
-                    className="btn btn-warning w-full"
+                    className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-warning'}`}
                     onClick={() => setShowRepayDebt(true)}
+                    disabled={Boolean(wrapperData.isLocked)}
                   >
                     Repay Debt
                   </button>
@@ -152,8 +156,9 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-semibold mb-4 text-white text-center">Quick Actions</h3>
                 <div className="space-y-3">
                   <button 
-                    className="btn btn-success w-full"
+                    className={`btn w-full ${Boolean(wrapperData.isLocked) ? 'btn-disabled' : 'btn-success'}`}
                     onClick={() => setShowRepayAllDebt(true)}
+                    disabled={Boolean(wrapperData.isLocked)}
                   >
                     Repay All Debt
                   </button>
@@ -195,7 +200,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <RemoveCollateralModal
@@ -220,7 +225,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <BorrowMoreModal
@@ -239,7 +244,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <RepayDebtModal
@@ -258,7 +263,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <RepayAllDebtModal
