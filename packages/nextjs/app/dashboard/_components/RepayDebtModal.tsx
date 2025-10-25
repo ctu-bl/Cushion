@@ -31,14 +31,15 @@ export const RepayDebtModal: React.FC<RepayDebtModalProps> = ({
     if (!amount || parseFloat(amount) <= 0) return parseFloat(currentHealthFactor);
     
     const repayAmount = parseFloat(amount);
-    const currentCollateral = parseFloat(totalCollateral);
-    const currentDebt = parseFloat(totalDebt);
+    const currentCollateral = parseFloat(totalCollateral); // ETH
+    const currentDebt = parseFloat(totalDebt); // USDC (USD)
     const price = parseFloat(ethPrice);
     
     if (currentDebt <= 0) return Number.MAX_SAFE_INTEGER;
     
-    // Convert ETH to USD value
+    // Convert ETH collateral to USD value
     const collateralValueUsd = currentCollateral * price;
+    // Debt is already in USD (USDC), so we can subtract directly
     const newDebtValueUsd = Math.max(0, currentDebt - repayAmount);
     
     if (newDebtValueUsd <= 0) return Number.MAX_SAFE_INTEGER;

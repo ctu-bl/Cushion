@@ -195,7 +195,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <RemoveCollateralModal
@@ -220,7 +220,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <BorrowMoreModal
@@ -239,7 +239,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <RepayDebtModal
@@ -258,7 +258,7 @@ export default function DashboardPage() {
         currentHealthFactor={wrapperData.healthFactor ? (Number(wrapperData.healthFactor) / 1e18).toFixed(2) : "0.00"}
         totalCollateral={wrapperData.totalCollateral ? (Number(wrapperData.totalCollateral) / 1e18).toFixed(4) : "0.0000"}
         totalDebt={wrapperData.totalDebt ? (Number(wrapperData.totalDebt) / 1e6).toFixed(2) : "0.00"}
-        ethPrice="2000"
+        ethPrice={ethPriceData.formatEthPrice(ethPriceData.currentEthPrice, ethPriceData.priceDecimals)}
       />
 
       <RepayAllDebtModal
