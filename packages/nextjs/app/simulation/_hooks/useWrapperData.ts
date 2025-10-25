@@ -1,51 +1,61 @@
 "use client";
 
 import { useReadContract } from "wagmi";
-import LoanWrapperArtifact from "../../../../hardhat/artifacts/contracts/LoanWrapper.sol/LoanWrapper.json";
+import type { Address } from "viem";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { LOAN_WRAPPER_ABI } from "../_constants/abis";
 
-export const useWrapperData = (userWrapperAddress?: string) => {
-  // Get wrapper details - using dynamic contract calls
+const LOAN_WRAPPER_REGISTRY_NAME = "LoanWrapperRegistry" as const;
+
+export const useWrapperData = (userWrapperAddress?: Address) => {
+  const enabled = Boolean(userWrapperAddress);
+
   const { data: totalCollateral } = useReadContract({
+    address: userWrapperAddress,
+    abi: LOAN_WRAPPER_ABI,
     functionName: "getTotalCollateralValue",
-    address: userWrapperAddress as `0x${string}`,
-    abi: LoanWrapperArtifact.abi,
     args: [],
+    query: { enabled },
   });
 
   const { data: totalDebt } = useReadContract({
+    address: userWrapperAddress,
+    abi: LOAN_WRAPPER_ABI,
     functionName: "getTotalDebtValue",
-    address: userWrapperAddress as `0x${string}`,
-    abi: LoanWrapperArtifact.abi,
     args: [],
+    query: { enabled },
   });
 
   const { data: ownerCollateral } = useReadContract({
+    address: userWrapperAddress,
+    abi: LOAN_WRAPPER_ABI,
     functionName: "getOwnerCollateralValue",
-    address: userWrapperAddress as `0x${string}`,
-    abi: LoanWrapperArtifact.abi,
     args: [],
+    query: { enabled },
   });
 
   const { data: investorCollateral } = useReadContract({
+    address: userWrapperAddress,
+    abi: LOAN_WRAPPER_ABI,
     functionName: "getInvestorCollateralValue",
-    address: userWrapperAddress as `0x${string}`,
-    abi: LoanWrapperArtifact.abi,
     args: [],
+    query: { enabled },
   });
 
   const { data: isLocked } = useReadContract({
+    address: userWrapperAddress,
+    abi: LOAN_WRAPPER_ABI,
     functionName: "isLocked",
-    address: userWrapperAddress as `0x${string}`,
-    abi: LoanWrapperArtifact.abi,
     args: [],
+    query: { enabled },
   });
 
-  // Health Factor (from Registry helper) - using deployedContracts for Registry
-  const { data: healthFactor } = useReadContract({
+  // ---- Health Factor z registry (tohle necháme na scaffold hooku) ----
+  const { data: healthFactor } = useScaffoldReadContract({
+    contractName: LOAN_WRAPPER_REGISTRY_NAME,
     functionName: "getHF",
-    address: "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF" as `0x${string}`, // Registry address
-    abi: LoanWrapperArtifact.abi, // Using same ABI for now
-    args: userWrapperAddress ? [userWrapperAddress] : undefined,
+    // vždy tuple, ne undefined pro celé args:
+    args: [userWrapperAddress ?? undefined] as const,
   });
 
   return {

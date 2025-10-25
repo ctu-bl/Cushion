@@ -2,9 +2,10 @@
 
 import { useScaffoldReadContract, useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useAccount } from "wagmi";
+import type { Address } from "viem";
 
 export const useSimulationData = () => {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
 
   // Load deployed mock addresses dynamically
   const { data: mockUSDCInfo } = useDeployedContractInfo("MockUSDC");
@@ -19,47 +20,51 @@ export const useSimulationData = () => {
   });
 
   const { data: allWrappers } = useScaffoldReadContract({
-    contractName: "LoanWrapperRegistry", 
+    contractName: "LoanWrapperRegistry",
     functionName: "getAllWrappers",
   });
 
-  // User balances
+  // User balances — vždy tuple; případně řídit enabled, pokud hook podporuje
   const { data: mockUSDCBalance } = useScaffoldReadContract({
     contractName: "MockUSDC",
     functionName: "balanceOf",
-    args: address ? [address] : undefined,
+    args: [address as Address | undefined] as const,
+    // query: { enabled: isConnected }, // odkomentuj, pokud useScaffoldReadContract podporuje
   });
 
   const { data: mockPYUSDBalance } = useScaffoldReadContract({
     contractName: "MockPYUSD",
     functionName: "balanceOf",
-    args: address ? [address] : undefined,
+    args: [address as Address | undefined] as const,
+    // query: { enabled: isConnected },
   });
 
   const { data: mockWETHBalance } = useScaffoldReadContract({
     contractName: "MockWETH",
-    functionName: "balance", 
-    args: address ? [address] : undefined,
+    functionName: "balance", // nebo "balanceOf" podle tvého ABI
+    args: [address as Address | undefined] as const,
+    // query: { enabled: isConnected },
   });
 
-  // Pool asset balances
+  // Pool asset balances — opět vždy tuple
   const { data: poolUSDCBalance } = useScaffoldReadContract({
     contractName: "MockUSDC",
     functionName: "balanceOf",
-    args: mockPoolInfo?.address ? [mockPoolInfo.address] : undefined,
+    args: [mockPoolInfo?.address as Address | undefined] as const,
   });
 
   const { data: poolWETHBalance } = useScaffoldReadContract({
     contractName: "MockWETH",
     functionName: "balance",
-    args: mockPoolInfo?.address ? [mockPoolInfo.address] : undefined,
+    args: [mockPoolInfo?.address as Address | undefined] as const,
   });
 
   // Get wrapper for current user
   const { data: userWrapperAddress } = useScaffoldReadContract({
     contractName: "LoanWrapperRegistry",
     functionName: "wrapperOf",
-    args: address ? [address] : undefined,
+    args: [address as Address | undefined] as const,
+    // query: { enabled: isConnected },
   });
 
   return {

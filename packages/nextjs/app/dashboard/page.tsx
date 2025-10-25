@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const { address, isConnected } = useAccount();
   const { showSuccess } = useSuccessBar();
   
-  // Custom hooks for data and actions
+  // Custom hooks for data and actions - always call hooks, but conditionally use data
   const simulationData = useSimulationData();
   const wrapperData = useWrapperData(simulationData.userWrapperAddress);
   const ethPriceData = useEthPrice();

@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Abi, AbiEvent, ExtractAbiEventNames } from "abitype";
@@ -121,18 +123,20 @@ export const useScaffoldEventHistory = <
 
   const event =
     deployedContractData &&
-    ((deployedContractData.abi as Abi).find(part => part.type === "event" && part.name === eventName) as AbiEvent);
+    ((deployedContractData.abi as Abi).find(
+      part => part.type === "event" && part.name === (eventName as string),
+    ) as AbiEvent);
 
   const isContractAddressAndClientReady = Boolean(deployedContractData?.address) && Boolean(publicClient);
 
-  const fromBlockValue =
-    fromBlock !== undefined
-      ? fromBlock
-      : BigInt(
-          deployedContractData && "deployedOnBlock" in deployedContractData
-            ? deployedContractData.deployedOnBlock || 0
-            : 0,
-        );
+  // --- SAFE převod deployedOnBlock -> bigint (zabrání BigInt({})) ---
+  const rawDeployedOnBlock = (deployedContractData as any)?.deployedOnBlock ?? 0;
+  const deployedOnBlockAsBigInt: bigint =
+    typeof rawDeployedOnBlock === "bigint"
+      ? rawDeployedOnBlock
+      : BigInt(Number(rawDeployedOnBlock) || 0);
+
+  const fromBlockValue: bigint = fromBlock ?? deployedOnBlockAsBigInt;
 
   const query = useInfiniteQuery({
     queryKey: [
@@ -141,7 +145,7 @@ export const useScaffoldEventHistory = <
         contractName,
         address: deployedContractData?.address,
         eventName,
-        fromBlock: fromBlockValue?.toString(),
+        fromBlock: fromBlockValue.toString(),
         toBlock: toBlock?.toString(),
         chainId: selectedNetwork.id,
         filters: JSON.stringify(filters, replacer),
@@ -151,11 +155,15 @@ export const useScaffoldEventHistory = <
     queryFn: async ({ pageParam }) => {
       if (!isContractAddressAndClientReady) return undefined;
 
+      const currentBlock = blockNumber ?? undefined; // bigint | undefined
+
       // Calculate the toBlock for this batch
       let batchToBlock = toBlock;
-      const batchEndBlock = pageParam + BigInt(blocksBatchSize) - 1n;
-      const maxBlock = toBlock || (blockNumber ? BigInt(blockNumber) : undefined);
-      if (maxBlock) {
+      const startForThisBatch = (pageParam as bigint) ?? fromBlockValue;
+      const batchEndBlock = startForThisBatch + BigInt(blocksBatchSize) - 1n;
+      const maxBlock = toBlock ?? currentBlock;
+
+      if (maxBlock !== undefined) {
         batchToBlock = batchEndBlock < maxBlock ? batchEndBlock : maxBlock;
       }
 
@@ -163,7 +171,7 @@ export const useScaffoldEventHistory = <
         {
           address: deployedContractData?.address,
           event,
-          fromBlock: pageParam,
+          fromBlock: startForThisBatch,
           toBlock: batchToBlock,
           args: filters,
         },
@@ -171,16 +179,16 @@ export const useScaffoldEventHistory = <
         { blockData, transactionData, receiptData },
       );
 
-      setLastFetchedBlock(batchToBlock || blockNumber || 0n);
+      setLastFetchedBlock((batchToBlock ?? currentBlock) ?? 0n);
 
       return data;
     },
     enabled: enabled && isContractAddressAndClientReady && !isPollingActive, // Disable when polling starts
     initialPageParam: fromBlockValue,
-    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+    getNextPageParam: (_lastPage, _allPages, lastPageParam) => {
       if (!blockNumber || fromBlockValue >= blockNumber) return undefined;
 
-      const nextBlock = lastPageParam + BigInt(blocksBatchSize);
+      const nextBlock = (lastPageParam as bigint) + BigInt(blocksBatchSize);
 
       // Don't go beyond the specified toBlock or current block
       const maxBlock = toBlock && toBlock < blockNumber ? toBlock : blockNumber;
@@ -190,7 +198,7 @@ export const useScaffoldEventHistory = <
       return nextBlock;
     },
     select: data => {
-      const events = data.pages.flat() as unknown as UseScaffoldEventHistoryData<
+      const events = (data.pages.flat().filter(Boolean) as unknown[]) as UseScaffoldEventHistoryData<
         TContractName,
         TEventName,
         TBlockData,
@@ -208,7 +216,6 @@ export const useScaffoldEventHistory = <
   // Check if we're caught up and should start polling
   const shouldStartPolling = () => {
     if (!watch || !blockNumber || isPollingActive) return false;
-
     return !query.hasNextPage && query.status === "success";
   };
 
@@ -226,7 +233,7 @@ export const useScaffoldEventHistory = <
       }
 
       const maxBlock = toBlock && toBlock < blockNumber ? toBlock : blockNumber;
-      const startBlock = lastFetchedBlock || maxBlock;
+      const startBlock = lastFetchedBlock ?? maxBlock;
 
       // Only fetch if there are new blocks to check
       if (startBlock >= maxBlock) return null;
@@ -273,7 +280,7 @@ export const useScaffoldEventHistory = <
   // remove duplicates
   const seenEvents = new Set<string>();
   const combinedEvents = allEvents.filter(event => {
-    const eventKey = `${event?.transactionHash}-${event?.logIndex}-${event?.blockHash}`;
+    const eventKey = `${(event as any)?.transactionHash}-${(event as any)?.logIndex}-${(event as any)?.blockHash}`;
     if (seenEvents.has(eventKey)) {
       return false;
     }
