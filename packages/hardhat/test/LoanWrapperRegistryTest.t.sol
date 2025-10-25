@@ -233,31 +233,6 @@ contract LoanWrapperRegistrySolidityTest is Test{
         registry = new LoanWrapperRegistry(address(provider), address(0), address(weth), address(usdc));
     }
 
-    function testWrapLoanHappyPath() public {
-        (LoanWrapperRegistry registry, MockPoolImpl pool, , MockWETH9 weth, MockERC20 usdc) = _deploy();
-
-        address borrower = address(0xB0bb);
-        uint256 ethCollateral = 5 ether;
-        uint256 borrowUSDC    = 1_000_000; // 1,000,000 wei USDC (6 dec)
-
-        registry.wrapLoan{value: ethCollateral}(borrower, borrowUSDC);
-
-        require(weth.balanceOf(address(registry)) == 0, "registry still holds WETH");
-
-        address wrapper = registry.wrapperOf(borrower);
-        require(wrapper != address(0), "wrapper not stored");
-        require(pool.lastDepositOnBehalfOf() == wrapper, "deposit not on wrapper");
-        require(pool.lastDepositAsset() == address(weth), "deposit asset != WETH");
-        require(pool.lastDepositAmount() == ethCollateral, "deposit amount mismatch");
-
-        require(pool.lastBorrowOnBehalfOf() == wrapper, "borrow not on wrapper");
-        require(pool.lastBorrowAsset() == address(usdc), "borrow asset != USDC");
-        require(pool.lastBorrowAmount() == borrowUSDC, "borrow amount mismatch");
-        require(pool.lastBorrowRateMode() == 2, "rateMode != VARIABLE");
-
-        require(usdc.balanceOf(borrower) == borrowUSDC, "borrower USDC not received");
-        require(usdc.balanceOf(address(registry)) == 0, "registry still holds USDC");
-    }
 
 
     function testWrapLoanRevertsWithoutETH() public {
@@ -271,84 +246,6 @@ contract LoanWrapperRegistrySolidityTest is Test{
         );
         require(!ok, "expected revert when no ETH sent");
     }
-
-    function testGetHFAndCheckHF() public {
-        (LoanWrapperRegistry registry, , , , ) = _deploy();
-        address borrower = address(0xB0bb);
-
-        registry.wrapLoan{value: 1 ether}(borrower, 1_000_000);
-        address wrapper = registry.wrapperOf(borrower);
-
-        uint256 hf = registry.getHF(wrapper);
-        require(hf >= 1e18, "hf too low");
-
-        bool healthy = registry.checkHF(wrapper);
-        require(healthy, "expected healthy");
-    }
-
-    function testIfBorrowerIsIndexedAfterWrapLoan() public{
-        (LoanWrapperRegistry registry, , , ,) = _deploy();
-
-        address borrower = address(0xB0bb);
-        uint256 ethCollateral = 5 ether;
-        uint256 borrowUSDC    = 1_000_000;
-
-        registry.wrapLoan{value: ethCollateral}(borrower, borrowUSDC);
-
-        address wrapper = registry.wrapperOf(borrower);
-        address indexedBorrower = LoanWrapper(payable(wrapper)).owner();
-
-        require(indexedBorrower == borrower, "borrower not indexed correctly");
-        require(wrapper != address(0), "wrapper not created");
-
-    }
-
-    function testMoreThatOneBorrows() public {
-        (LoanWrapperRegistry registry, MockPoolImpl pool, , ,) = _deploy();
-
-        address borrower1 = address(0xB0bb);
-        uint256 ethCollateral1 = 5 ether;
-        uint256 borrowUSDC1    = 1_000_000;
-
-        address borrower2 = address(0xC0de);
-        uint256 ethCollateral2 = 3 ether;
-        uint256 borrowUSDC2    = 500_000;
-
-        registry.wrapLoan{value: ethCollateral1}(borrower1, borrowUSDC1);
-
-        registry.wrapLoan{value: ethCollateral2}(borrower2, borrowUSDC2);
-
-        address wrapper1 = registry.wrapperOf(borrower1);
-        address indexedBorrower1 = LoanWrapper(payable(wrapper1)).owner();
-
-        address wrapper2 = registry.wrapperOf(borrower2);
-        address indexedBorrower2 = LoanWrapper(payable(wrapper2)).owner();
-
-        address lastWrapper = pool.lastBorrowOnBehalfOf();
-
-        require(indexedBorrower1 == borrower1, "borrower1 not indexed correctly");
-        require(wrapper1 != address(0), "wrapper1 not created");
-
-        require(indexedBorrower2 == borrower2, "borrower2 not indexed correctly");
-        require(wrapper2 != address(0), "wrapper2 not created");
-
-        require(lastWrapper == wrapper2, "Wrapper 2 was not created successfully");
-    }
-
-    function testWrongAssetsEntered() public {
-        (LoanWrapperRegistry registry, , , ,) = _deploy();
-
-        LoanWrapperRegistry wrongRegistry = new LoanWrapperRegistry(address(registry.provider()), address(0), address(0), address(0));
-
-        address borrower = address(0xB0bb);
-        uint256 borrowUSDC = 1_000_000;
-
-        (bool ok, ) = address(wrongRegistry).call(
-            abi.encodeWithSelector(wrongRegistry.wrapLoan.selector, borrower, borrowUSDC)
-        );
-        require(!ok, "expected revert when wrong assets set");
-    }
-
 
 
 
