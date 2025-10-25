@@ -253,8 +253,6 @@ async function generateDeployedContracts(vaultAddress: string, registryAddress: 
   const MockWETH9ABI = (await hre.artifacts.readArtifact("MockWETH9")).abi;
   const MockPoolImplABI = (await hre.artifacts.readArtifact("MockPoolImpl")).abi;
   const MockAddressesProviderABI = (await hre.artifacts.readArtifact("MockAddressesProvider")).abi;
-  const MockVariableDebtTokenABI = (await hre.artifacts.readArtifact("MockVariableDebtToken")).abi;
-  const MockATokenABI = (await hre.artifacts.readArtifact("MockAToken")).abi;
   const OracleABI = (await hre.artifacts.readArtifact("MockEthOracle")).abi;
   const ConsumerABI = (await hre.artifacts.readArtifact("PriceConsumer")).abi;
   
@@ -289,14 +287,6 @@ async function generateDeployedContracts(vaultAddress: string, registryAddress: 
       MockAddressesProvider: {
         address: mockAddresses.mockProvider,
         abi: MockAddressesProviderABI,
-      },
-      MockVariableDebtToken: {
-        address: mockAddresses.variableDebtToken,
-        abi: MockVariableDebtTokenABI,
-      },
-      MockAToken: {
-        address: mockAddresses.aToken,
-        abi: MockATokenABI,
       },
       MockEthOracle: {
         address: mockAddresses.mockEthOracle,

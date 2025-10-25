@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   "31337": {
     "Vault": {
-      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+      "address": "0xB0D4afd8879eD9F52b28595d31B441D079B2Ca07",
       "abi": [
         {
           "inputs": [
@@ -1540,7 +1540,7 @@ const deployedContracts = {
       ]
     },
     "LoanWrapperRegistry": {
-      "address": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
+      "address": "0x162A433068F51e18b7d13932F27e66a3f99E6890",
       "abi": [
         {
           "inputs": [
@@ -1828,7 +1828,7 @@ const deployedContracts = {
       ]
     },
     "MockUSDC": {
-      "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "address": "0x5eb3Bc0a489C5A8288765d2336659EbCA68FCd00",
       "abi": [
         {
           "anonymous": false,
@@ -2091,7 +2091,7 @@ const deployedContracts = {
       ]
     },
     "MockPYUSD": {
-      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "address": "0x36C02dA8a0983159322a80FFE9F24b1acfF8B570",
       "abi": [
         {
           "anonymous": false,
@@ -2354,7 +2354,7 @@ const deployedContracts = {
       ]
     },
     "MockWETH": {
-      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "address": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D",
       "abi": [
         {
           "stateMutability": "payable",
@@ -2596,7 +2596,7 @@ const deployedContracts = {
       ]
     },
     "MockPool": {
-      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "address": "0x5f3f1dBD7B74C6B46e8c44f98792A1dAf8d69154",
       "abi": [
         {
           "inputs": [
@@ -4578,7 +4578,7 @@ const deployedContracts = {
       ]
     },
     "MockAddressesProvider": {
-      "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      "address": "0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575",
       "abi": [
         {
           "inputs": [
@@ -5102,107 +5102,8 @@ const deployedContracts = {
         }
       ]
     },
-    "MockVariableDebtToken": {
-      "abi": [
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "fromUser",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "toUser",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "BorrowAllowanceDelegated",
-          "type": "event"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "delegatee",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "approveDelegation",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "name": "borrowAllowance",
-          "outputs": [
-            {
-              "internalType": "uint256",
-              "name": "",
-              "type": "uint256"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        }
-      ]
-    },
-    "MockAToken": {
-      "abi": [
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "_underlying",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "nonpayable",
-          "type": "constructor"
-        },
-        {
-          "inputs": [],
-          "name": "underlying",
-          "outputs": [
-            {
-              "internalType": "contract IERC20Like",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        }
-      ]
-    },
     "MockEthOracle": {
-      "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "address": "0x4c5859f0F772848b2D91F1D83E2Fe57935348029",
       "abi": [
         {
           "inputs": [
@@ -5344,7 +5245,7 @@ const deployedContracts = {
       ]
     },
     "PriceConsumer": {
-      "address": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
+      "address": "0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f",
       "abi": [
         {
           "inputs": [
