@@ -48,6 +48,15 @@ ABI_LoanWrapper = [
         "stateMutability": "view",
         "type": "function",
     },
+    {
+        "inputs": [],
+        "name": "getIsActive",
+        "outputs": [
+            {"internalType": "bool", "name": "", "type": "bool"}
+        ],
+        "stateMutability": "view",
+        "type": "function",
+    },
 ]
 
 ABI_LoanWrapperRegistry = [
@@ -272,7 +281,8 @@ def get_hf(wrapper_address: str):
 
 
 def is_locked(LoanWrapper_address: str):
-    """Check if the specified LoanWrapper contract is locked.
+    """
+    Check if the specified LoanWrapper contract is locked.
     :param LoanWrapper_address: Address of the LoanWrapper contract.
     :return: True if locked, False otherwise.
     """
@@ -280,6 +290,17 @@ def is_locked(LoanWrapper_address: str):
     locked = loanWrapper_contract.functions.isLocked().call()
     print(f"Loan wrapper locked: {locked}")
     return locked
+
+def is_active_loan(LoanWrapper_address: str):
+    """
+    Check if the specified LoanWrapper contract is active.
+    :param LoanWrapper_address: Address of the LoanWrapper contract.
+    :return: True if locked, False otherwise.
+    """
+    loanWrapper_contract = w3.eth.contract(address=LoanWrapper_address, abi=ABI_LoanWrapper)
+    active = loanWrapper_contract.functions.isLocked().call()
+    print(f"Loan wrapper active: {active}")
+    return active
 
 def set_price(newPrice: int):
     """
@@ -326,6 +347,8 @@ def monitoring():
             if not wrappers:
                 print("Address pool is empty")
             for wrapper in wrappers:
+                if is_active_loan(wrapper):
+                    continue
                 hf = get_hf(wrapper)
                 locked = is_locked(wrapper)
 
